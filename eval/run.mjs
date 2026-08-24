@@ -8,13 +8,17 @@ const lines = readFileSync(new URL("./golden.jsonl", import.meta.url), "utf8")
 let fail = 0;
 for (const line of lines) {
   const ex = JSON.parse(line);
-  const r = analyze({ text: ex.text, dialect: ex.dialect, styleGuide: ex.styleGuide });
+  const r = analyze({ text: ex.text, dialect: ex.dialect, styleGuide: ex.styleGuide, goals: ex.goals });
   if (ex.expectNoSpell && r.matches.some((m) => m.ruleId.startsWith("SPELL"))) {
     console.error("fail expectNoSpell", ex.text);
     fail++;
   }
   if (ex.expectRule && !r.matches.some((m) => m.ruleId === ex.expectRule)) {
     console.error("fail expectRule", ex.expectRule, r.matches.map((m) => m.ruleId));
+    fail++;
+  }
+  if (ex.expectNoRule && r.matches.some((m) => m.ruleId === ex.expectNoRule)) {
+    console.error("fail expectNoRule", ex.expectNoRule, ex.text);
     fail++;
   }
   if (ex.expectRulePrefix && !r.matches.some((m) => m.ruleId.startsWith(ex.expectRulePrefix))) {

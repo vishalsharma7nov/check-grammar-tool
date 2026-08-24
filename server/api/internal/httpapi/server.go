@@ -85,16 +85,7 @@ func (s *Server) check(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid json", 400)
 		return
 	}
-	res := check.Analyze(req)
-	if req.IncludeLLM {
-		out, err := s.llm.Rewrite(r.Context(), req.Text, "List residual issues after rules; if none, say OK.", string(req.Dialect), false)
-		if err != nil {
-			res.LLM = check.LLMMeta{Used: false, Provider: "local", SkippedReason: err.Error()}
-		} else {
-			res.LLM = check.LLMMeta{Used: true, Provider: out.Provider, Model: out.Model}
-		}
-	}
-	writeJSON(w, 200, res)
+	writeJSON(w, 200, check.Analyze(req))
 }
 
 // LanguageTool-shaped compatibility so existing clients can point here.
@@ -150,6 +141,7 @@ func (s *Server) rewrite(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid json", 400)
 		return
 	}
+	req.Instruction = rewriteInstruction(req.Instruction)
 	if req.Hosted {
 		u := s.userFrom(r)
 		plan := "free"
@@ -260,4 +252,18 @@ func randID() string {
 	b := make([]byte, 8)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
+}
+
+// rewriteInstruction maps short preset names to full prompts.
+func rewriteInstruction(instruction string) string {
+	switch strings.ToLower(strings.TrimSpace(instruction)) {
+	case "clarity":
+		return "Rewrite for clarity. Use plain, direct language. Preserve meaning."
+	case "brevity":
+		return "Rewrite to be more concise. Remove filler words. Preserve meaning."
+	case "formality":
+		return "Rewrite in a formal, professional tone. Preserve meaning."
+	default:
+		return instruction
+	}
 }

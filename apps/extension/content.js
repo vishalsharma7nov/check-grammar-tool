@@ -3,10 +3,50 @@
  * Uses the bundled on-device engine when present; otherwise /v1/check.
  */
 const HOST_ID = "check-grammar-overlay-host";
+const DICT_KEY = "personalDictionary";
 
 function engine() {
   return globalThis.CheckGrammar || null;
 }
+
+let personalDictionary = [];
+let activeEl = null;
+let activeMatch = null;
+
+function loadPersonalDictionary() {
+  if (typeof chrome !== "undefined" && chrome.storage?.local) {
+    chrome.runtime.sendMessage({ type: "getDictionary" }, (res) => {
+      if (res?.dict) personalDictionary = res.dict;
+    });
+    return;
+  }
+  try {
+    const raw = localStorage.getItem("check-grammar-personal-dict");
+    personalDictionary = raw ? JSON.parse(raw) : [];
+  } catch {
+    personalDictionary = [];
+  }
+}
+
+function addToDictionary(word) {
+  const w = String(word || "").trim();
+  if (!w) return;
+  if (typeof chrome !== "undefined" && chrome.runtime?.sendMessage) {
+    chrome.runtime.sendMessage({ type: "addToDictionary", word: w }, () => loadPersonalDictionary());
+    return;
+  }
+  const lower = w.toLowerCase();
+  if (!personalDictionary.some((x) => String(x).toLowerCase() === lower)) {
+    personalDictionary.push(w);
+    try {
+      localStorage.setItem("check-grammar-personal-dict", JSON.stringify(personalDictionary));
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+loadPersonalDictionary();
 
 function ensureHost() {
   let host = document.getElementById(HOST_ID);
@@ -45,7 +85,7 @@ function cardStyles() {
 function getText(el) {
   if (!el) return "";
   if (typeof el.value === "string") return el.value;
-  return el.innerText || "";
+  return el.textContent || "";
 }
 
 function caretOf(el) {
@@ -62,6 +102,31 @@ function caretOf(el) {
   }
 }
 
+function setCaretInContentEditable(el, offset) {
+  const sel = window.getSelection();
+  if (!sel) return;
+  const range = document.createRange();
+  let remaining = offset;
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  let node = walker.nextNode();
+  while (node) {
+    const len = node.textContent?.length ?? 0;
+    if (remaining <= len) {
+      range.setStart(node, remaining);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      return;
+    }
+    remaining -= len;
+    node = walker.nextNode();
+  }
+  range.selectNodeContents(el);
+  range.collapse(false);
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
 function setValue(el, next, cursor) {
   if (typeof el.value === "string") {
     el.value = next;
@@ -75,7 +140,10 @@ function setValue(el, next, cursor) {
     el.dispatchEvent(new Event("input", { bubbles: true }));
     return;
   }
-  el.innerText = next;
+  el.textContent = next;
+  if (typeof cursor === "number") {
+    setCaretInContentEditable(el, cursor);
+  }
   el.dispatchEvent(new InputEvent("input", { bubbles: true }));
 }
 
@@ -114,7 +182,8 @@ function mirrorRect(el, start, end) {
   }
   const span = document.createElement("span");
   span.textContent = text.slice(start, end) || " ";
-  mirror.append(text.slice(0, start), span);
+  const before = document.createTextNode(text.slice(0, start));
+  mirror.append(before, span);
   document.body.appendChild(mirror);
   const sr = span.getBoundingClientRect();
   const tr = el.getBoundingClientRect();
@@ -137,8 +206,20 @@ function rangeRect(el, start, end) {
   return mirrorRect(el, start, end);
 }
 
+function acceptMatch(el, match, repl) {
+  const cg = engine();
+  const next = cg?.applyReplacement
+    ? cg.applyReplacement(getText(el), match.offset, match.length, repl)
+    : getText(el).slice(0, match.offset) + repl + getText(el).slice(match.offset + match.length);
+  setValue(el, next, match.offset + repl.length);
+  el.focus();
+  activeMatch = null;
+}
+
 function showCard(root, el, match) {
   root.querySelector(".card")?.remove();
+  activeEl = el;
+  activeMatch = match;
   const original = getText(el).slice(match.offset, match.offset + match.length);
   const r = rangeRect(el, match.offset, match.offset + match.length);
   const card = document.createElement("div");
@@ -146,12 +227,14 @@ function showCard(root, el, match) {
   card.style.left = Math.min(Math.max(8, r.left || r.x || 8), window.innerWidth - 312) + "px";
   card.style.top = Math.min((r.bottom || 80) + 8, window.innerHeight - 200) + "px";
   const repl = (match.replacements && match.replacements[0]) || "";
+  const isSpell = match.category === "spelling";
   card.innerHTML = `
     <div class="kind">${match.category || "suggestion"}</div>
     ${repl ? `<button class="fix" data-act="accept"><span class="from"></span><span class="to"></span></button>` : ""}
     <p class="why"></p>
     <div class="row">
       ${repl ? `<button class="ok" data-act="accept">Accept</button>` : ""}
+      ${isSpell ? `<button data-act="dict">Add to dictionary</button>` : ""}
       <button data-act="dismiss">Dismiss</button>
     </div>`;
   card.querySelector(".why").textContent = match.explanation || match.message || "";
@@ -161,14 +244,12 @@ function showCard(root, el, match) {
   if (to) to.textContent = repl ? " → " + repl : "";
   card.addEventListener("click", (ev) => {
     const act = ev.target.closest("[data-act]")?.getAttribute("data-act");
-    if (act === "accept" && repl) {
-      const cg = engine();
-      const next = cg?.applyReplacement
-        ? cg.applyReplacement(getText(el), match.offset, match.length, repl)
-        : getText(el).slice(0, match.offset) + repl + getText(el).slice(match.offset + match.length);
-      setValue(el, next, match.offset + repl.length);
+    if (act === "accept" && repl) acceptMatch(el, match, repl);
+    if (act === "dict" && isSpell) addToDictionary(original);
+    if (act === "accept" || act === "dict" || act === "dismiss") {
+      activeMatch = null;
+      card.remove();
     }
-    card.remove();
   });
   root.appendChild(card);
 }
@@ -197,6 +278,7 @@ function showChips(root, el, suggestions) {
       if (!cg?.insertSuggestion) return;
       const out = cg.insertSuggestion(getText(el), caretOf(el), s);
       setValue(el, out.text, out.cursor);
+      el.focus();
     });
     bar.append(b);
   }
@@ -231,14 +313,18 @@ function paint(el, matches, help) {
   const pick =
     (cg?.matchNearCaret && cg.matchNearCaret(getText(el), matches || [], caret)) ||
     (matches || []).find((m) => caret >= m.offset && caret <= m.offset + m.length);
-  if (pick) showCard(root, el, pick);
+  if (pick && activeMatch && activeMatch.offset === pick.offset && activeMatch.ruleId === pick.ruleId) {
+    showCard(root, el, pick);
+  } else if (activeMatch) {
+    activeMatch = null;
+  }
   showChips(root, el, help?.next || []);
 }
 
 function check(text, caret) {
   const cg = engine();
   if (cg?.analyze) {
-    return Promise.resolve(cg.analyze({ text, dialect: "en-IN", caret }));
+    return Promise.resolve(cg.analyze({ text, dialect: "en-IN", caret, personalDictionary }));
   }
   return new Promise((resolve) => {
     chrome.runtime.sendMessage({ type: "check", text, caret }, (res) => resolve(res || { matches: [] }));
@@ -253,6 +339,7 @@ function bind(el) {
   const run = () => {
     clearTimeout(t);
     t = setTimeout(async () => {
+      activeEl = el;
       const text = getText(el);
       if (!text.trim()) {
         paint(el, [], { next: [] });
@@ -267,6 +354,9 @@ function bind(el) {
   el.addEventListener("input", run);
   el.addEventListener("keyup", run);
   el.addEventListener("click", run);
+  el.addEventListener("focus", () => {
+    activeEl = el;
+  });
   el.addEventListener("keydown", (e) => {
     if (e.key !== "Tab" || e.shiftKey) return;
     const cg = engine();
@@ -276,6 +366,7 @@ function bind(el) {
     e.preventDefault();
     const out = cg.insertSuggestion(getText(el), caretOf(el), help.next[0]);
     setValue(el, out.text, out.cursor);
+    el.focus();
   });
 }
 
@@ -283,6 +374,16 @@ function scan() {
   document
     .querySelectorAll("textarea, input[type=text], input[type=search], input[type=email], input:not([type]), [contenteditable='true'], [contenteditable='']")
     .forEach(bind);
+}
+
+if (typeof chrome !== "undefined" && chrome.runtime?.onMessage) {
+  chrome.runtime.onMessage.addListener((msg) => {
+    if (msg.type !== "acceptSuggestion") return;
+    if (!activeEl || !activeMatch) return;
+    const repl = activeMatch.replacements?.[0];
+    if (repl) acceptMatch(activeEl, activeMatch, repl);
+    ensureHost().querySelector(".card")?.remove();
+  });
 }
 
 const mo = new MutationObserver(scan);

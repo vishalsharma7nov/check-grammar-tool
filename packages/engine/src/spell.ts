@@ -57,6 +57,32 @@ function edits1(word: string): string[] {
   return out;
 }
 
+/** Collapse runs of 3+ identical letters to length 1 or 2 (e.g. heeeelooo → helo/heloo/…). */
+function elongationVariants(word: string): string[] {
+  const runs: { ch: string; n: number }[] = [];
+  for (let i = 0; i < word.length; ) {
+    let j = i + 1;
+    while (j < word.length && word[j] === word[i]) j++;
+    runs.push({ ch: word[i]!, n: j - i });
+    i = j;
+  }
+  if (!runs.some((r) => r.n >= 3)) return [];
+
+  const out: string[] = [];
+  const walk = (idx: number, acc: string) => {
+    if (idx === runs.length) {
+      if (acc !== word) out.push(acc);
+      return;
+    }
+    const { ch, n } = runs[idx]!;
+    const maxKeep = n >= 3 ? 2 : n;
+    const minKeep = n >= 3 ? 1 : n;
+    for (let k = minKeep; k <= maxKeep; k++) walk(idx + 1, acc + ch.repeat(k));
+  };
+  walk(0, "");
+  return out;
+}
+
 export function spellSuggestions(word: string, extra: string[] = []): string[] {
   const lower = word.toLowerCase();
   const set = wordSet();
@@ -66,6 +92,13 @@ export function spellSuggestions(word: string, extra: string[] = []): string[] {
   }
   for (const e of edits1(lower)) {
     if (set.has(e) && e !== lower) found.add(e);
+  }
+  // Stretched greetings etc. exceed max edit distance; try collapsed forms (+1 edit).
+  for (const v of elongationVariants(lower)) {
+    if (set.has(v) && v !== lower) found.add(v);
+    for (const e of edits1(v)) {
+      if (set.has(e) && e !== lower) found.add(e);
+    }
   }
   if (found.size === 0 && lower.length <= 14) {
     for (const e1 of edits1(lower)) {

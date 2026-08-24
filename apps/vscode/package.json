@@ -12,8 +12,27 @@
     "configuration": {
       "title": "Check Grammar",
       "properties": {
-        "checkGrammar.apiUrl": { "type": "string", "default": "http://127.0.0.1:8080" },
-        "checkGrammar.dialect": { "type": "string", "default": "en-IN" }
+        "checkGrammar.apiUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:8080",
+          "description": "Local API base URL for POST /v1/check"
+        },
+        "checkGrammar.dialect": {
+          "type": "string",
+          "default": "en-IN",
+          "description": "English dialect (en-IN, en-US, en-GB, en-AU, en-CA)"
+        },
+        "checkGrammar.useBundledEngine": {
+          "type": "boolean",
+          "default": true,
+          "description": "When the API is unreachable, run server/shim/check-cli.mjs (Node + bundled TypeScript engine) as a fallback"
+        },
+        "checkGrammar.personalDictionary": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Words to skip during spell-check (names, jargon)"
+        }
       }
     }
   }

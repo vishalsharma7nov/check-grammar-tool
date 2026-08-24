@@ -44,7 +44,7 @@ export function textareaRangeRect(
       (cs as unknown as Record<string, string>)[p] ?? "",
     );
   }
-  const before = ta.value.slice(0, start);
+  const before = document.createTextNode(ta.value.slice(0, start));
   const mid = ta.value.slice(start, end) || " ";
   const span = document.createElement("span");
   span.textContent = mid;

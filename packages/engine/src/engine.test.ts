@@ -69,7 +69,7 @@ describe("privacy engine", () => {
 
   it("flags homophone your/you're confusion", () => {
     const r = analyze({ text: "Your going to love this." });
-    assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_HOMOPHONE_YOUR"));
+    assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_HOMOPHONE_YOUR" || m.ruleId === "SPELL_CONTEXT_YOUR"));
   });
 
   it("flags then/than comparison mix-up", () => {
@@ -100,6 +100,141 @@ describe("privacy engine", () => {
   it("flags me and lowercase name in subject position", () => {
     const r = analyze({ text: "Me and john went home." });
     assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_ME_AND_SUBJECT"));
+  });
+});
+
+describe("tone analysis", () => {
+  it("flags casual slang when formality is formal", () => {
+    const r = analyze({ text: "I gonna finish this asap.", goals: { formality: "formal" } });
+    assert.ok(r.matches.some((m) => m.ruleId === "TONE_CASUAL_GONNA"));
+    assert.ok(r.matches.some((m) => m.ruleId === "TONE_CASUAL_ASAP"));
+  });
+
+  it("does not flag casual slang when formality is neutral", () => {
+    const r = analyze({ text: "I gonna finish this asap.", goals: { formality: "neutral" } });
+    assert.equal(r.matches.filter((m) => m.category === "tone").length, 0);
+  });
+
+  it("flags formal jargon when formality is casual", () => {
+    const r = analyze({ text: "We will utilize the platform pursuant to policy.", goals: { formality: "casual" } });
+    assert.ok(r.matches.some((m) => m.ruleId === "TONE_FORMAL_UTILIZE"));
+    assert.ok(r.matches.some((m) => m.ruleId === "TONE_FORMAL_PURSUANT"));
+  });
+
+  it("detects uncertain tone signals", () => {
+    const r = analyze({ text: "I guess it seems like a good idea.", goals: { formality: "neutral" } });
+    assert.ok(r.matches.some((m) => m.ruleId === "TONE_UNCERTAIN_GUESS"));
+    assert.ok(r.matches.some((m) => m.ruleId === "TONE_UNCERTAIN_SEEMS"));
+  });
+
+  it("detects confident tone signals", () => {
+    const r = analyze({ text: "Without a doubt, this is guaranteed to work.", goals: { formality: "neutral" } });
+    assert.ok(r.matches.some((m) => m.ruleId === "TONE_CONFIDENT_DOUBT"));
+    assert.ok(r.matches.some((m) => m.ruleId === "TONE_CONFIDENT_GUARANTEED"));
+  });
+});
+
+describe("context-aware spelling", () => {
+  it("flags their before a verb as they're", () => {
+    const r = analyze({ text: "Their going to the store." });
+    assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_HOMOPHONE_THEIR" || m.ruleId === "SPELL_CONTEXT_THEIR"));
+  });
+
+  it("flags there before possessive noun as their", () => {
+    const r = analyze({ text: "There team won the match." });
+    assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_HOMOPHONE_THERE" || m.ruleId === "SPELL_CONTEXT_THERE"));
+  });
+
+  it("flags go their as go there", () => {
+    const r = analyze({ text: "We should go their now." });
+    assert.ok(r.matches.some((m) => m.ruleId === "SPELL_CONTEXT_PHRASE_GO_THEIR"));
+  });
+
+  it("flags if your ready as if you're ready", () => {
+    const r = analyze({ text: "If your ready, let's start." });
+    assert.ok(
+      r.matches.some(
+        (m) =>
+          m.ruleId === "SPELL_CONTEXT_PHRASE_IF_YOUR" ||
+          m.ruleId === "GRAMMAR_HOMOPHONE_YOUR" ||
+          m.ruleId === "SPELL_CONTEXT_YOUR",
+      ),
+    );
+  });
+
+  it("does not flag correct possessive their", () => {
+    const r = analyze({ text: "Their team won the match." });
+    assert.equal(r.matches.filter((m) => /THEIR|THEIR|THEIR/.test(m.ruleId)).length, 0);
+  });
+});
+
+describe("expanded grammar rules", () => {
+  it("flags could of as could have", () => {
+    const r = analyze({ text: "I could of done it." });
+    assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_MODAL_OF"));
+    assert.ok(r.matches.some((m) => m.replacements.includes("could have")));
+  });
+
+  it("flags would of and should of", () => {
+    const would = analyze({ text: "She would of called." });
+    const should = analyze({ text: "You should of known." });
+    assert.ok(would.matches.some((m) => m.ruleId === "GRAMMAR_MODAL_OF"));
+    assert.ok(should.matches.some((m) => m.ruleId === "GRAMMAR_MODAL_OF"));
+  });
+
+  it("flags peak at as peek at", () => {
+    const r = analyze({ text: "Take a peak at this." });
+    assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_PEEK_PEAK"));
+  });
+
+  it("flags bare with me as bear with me", () => {
+    const r = analyze({ text: "Bare with me for a moment." });
+    assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_BEAR_WITH"));
+  });
+
+  it("flags hit the break as hit the brake", () => {
+    const r = analyze({ text: "Hit the break now." });
+    assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_BRAKE_BREAK"));
+  });
+
+  it("flags school principle as principal", () => {
+    const r = analyze({ text: "The school principle approved it." });
+    assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_PRINCIPAL_PERSON"));
+  });
+
+  it("flags colors compliment as complement", () => {
+    const r = analyze({ text: "The colors compliment each other." });
+    assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_COMPLEMENT"));
+  });
+
+  it("flags office stationary as stationery", () => {
+    const r = analyze({ text: "Order office stationary today." });
+    assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_STATIONERY"));
+  });
+
+  it("flags alot as a lot", () => {
+    const r = analyze({ text: "That helps alot." });
+    assert.ok(
+      r.matches.some((m) => m.ruleId === "GRAMMAR_A_LOT" || (m.ruleId === "SPELL_ALOT" && m.replacements.includes("a lot"))),
+    );
+  });
+
+  it("flags whom after preposition", () => {
+    const r = analyze({ text: "To who did you speak?" });
+    assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_WHO_WHOM"));
+  });
+
+  it("suggests Oxford comma in lists", () => {
+    const r = analyze({ text: "We need eggs, milk and bread." });
+    assert.ok(r.matches.some((m) => m.ruleId === "PUNCT_OXFORD_COMMA"));
+  });
+
+  it("flags missing apostrophe contractions", () => {
+    const r = analyze({ text: "Theyre wont come and doesnt matter." });
+    const reps = r.matches.filter((m) => m.ruleId === "GRAMMAR_MISSING_APOSTROPHE").flatMap((m) => m.replacements);
+    assert.ok(reps.some((x) => x.toLowerCase() === "they're"));
+    assert.ok(reps.some((x) => x.toLowerCase() === "won't"));
+    assert.ok(reps.some((x) => x.toLowerCase() === "doesn't"));
   });
 });
 
@@ -154,6 +289,13 @@ describe("free dictionary spelling", () => {
     assert.ok(r.matches.some((m) => m.ruleId === "SPELL_DICT" && m.message.includes("mispelled")));
     const helloFix = r.matches.find((m) => m.message.includes("helllo"));
     assert.ok(helloFix?.replacements.some((x) => x.toLowerCase() === "hello"));
+  });
+
+  it("suggests hello for elongated greetings beyond edit distance 2", () => {
+    const r = analyze({ text: "I said heeeelooo" });
+    const m = r.matches.find((x) => x.message.includes("heeeelooo"));
+    assert.ok(m);
+    assert.ok(m?.replacements.some((x) => x.toLowerCase() === "hello"));
   });
 
   it("does not flag correctly spelled words", () => {

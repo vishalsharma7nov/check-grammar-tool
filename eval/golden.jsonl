@@ -8,3 +8,40 @@
 {"text":"She did went home.","expectRule":"GRAMMAR_DID_PAST"}
 {"text":"Because the deadline is near.","expectRule":"GRAMMAR_FRAGMENT"}
 {"text":"Why you are late?","expectRule":"GRAMMAR_QUESTION_ORDER"}
+{"text":"I dont think its ready.","expectRule":"GRAMMAR_MISSING_APOSTROPHE"}
+{"text":"Your going to love this.","expectRule":"GRAMMAR_HOMOPHONE_YOUR"}
+{"text":"She is taller then me.","expectRule":"GRAMMAR_HOMOPHONE_THEN_THAN"}
+{"text":"We need less errors in production.","expectRule":"GRAMMAR_LESS_FEWER"}
+{"text":"Their going to the store.","expectRule":"GRAMMAR_HOMOPHONE_THEIR"}
+{"text":"There team won the match.","expectRule":"GRAMMAR_HOMOPHONE_THERE"}
+{"text":"We should go their now.","expectRule":"SPELL_CONTEXT_PHRASE_GO_THEIR"}
+{"text":"If your ready, let's start.","expectRule":"SPELL_CONTEXT_PHRASE_IF_YOUR"}
+{"text":"He have a car.","expectRule":"GRAMMAR_SV_HAVE"}
+{"text":"They was late.","expectRule":"GRAMMAR_SV_WAS"}
+{"text":"She doesn't like it.","expectNoRule":"GRAMMAR_SV_DOESNT"}
+{"text":"There is many options.","expectRule":"GRAMMAR_THERE_IS_PLURAL"}
+{"text":"These is wrong.","expectRule":"GRAMMAR_THESE_IS"}
+{"text":"Between you and I, it is fine.","expectRule":"GRAMMAR_BETWEEN_YOU_AND_I"}
+{"text":"Despite of the rain, we went.","expectRule":"GRAMMAR_DESPITE_OF"}
+{"text":"I gonna finish this asap.","goals":{"formality":"formal"},"expectRule":"TONE_CASUAL_GONNA"}
+{"text":"We will utilize the platform pursuant to policy.","goals":{"formality":"casual"},"expectRule":"TONE_FORMAL_UTILIZE"}
+{"text":"I guess it seems like a good idea.","goals":{"formality":"neutral"},"expectRule":"TONE_UNCERTAIN_GUESS"}
+{"text":"Without a doubt, this is guaranteed to work.","goals":{"formality":"neutral"},"expectRule":"TONE_CONFIDENT_DOUBT"}
+{"text":"The dog wagged its tail.","expectNoRule":"GRAMMAR_ITS_IT_IS"}
+{"text":"Its going to rain.","expectRule":"GRAMMAR_ITS_IT_IS"}
+{"text":"This helllo is mispelled.","expectRulePrefix":"SPELL_DICT"}
+{"text":"I could of done it.","expectRule":"GRAMMAR_MODAL_OF"}
+{"text":"She would of called.","expectRule":"GRAMMAR_MODAL_OF"}
+{"text":"You should of known.","expectRule":"GRAMMAR_MODAL_OF"}
+{"text":"Take a peak at this.","expectRule":"GRAMMAR_PEEK_PEAK"}
+{"text":"Bare with me for a moment.","expectRule":"GRAMMAR_BEAR_WITH"}
+{"text":"Hit the break now.","expectRule":"GRAMMAR_BRAKE_BREAK"}
+{"text":"The school principle approved it.","expectRule":"GRAMMAR_PRINCIPAL_PERSON"}
+{"text":"The colors compliment each other.","expectRule":"GRAMMAR_COMPLEMENT"}
+{"text":"Order office stationary today.","expectRule":"GRAMMAR_STATIONERY"}
+{"text":"That helps alot.","expectRule":"SPELL_ALOT"}
+{"text":"To who did you speak?","expectRule":"GRAMMAR_WHO_WHOM"}
+{"text":"We need eggs, milk and bread.","expectRule":"PUNCT_OXFORD_COMMA"}
+{"text":"Theyre wont come and doesnt matter.","expectRule":"GRAMMAR_MISSING_APOSTROPHE"}
+{"text":"Use irregardless of the cost.","expectRule":"GRAMMAR_IRREGARDLESS"}
+{"text":"I ordered an expresso.","expectRule":"SPELL_EXPRESSO"}

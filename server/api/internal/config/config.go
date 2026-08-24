@@ -28,6 +28,7 @@ type Config struct {
 	StripePricePro    string
 	StripePriceTeam   string
 	HostedRewriteQuota int
+	LanguageToolURL    string
 }
 
 func FromEnv() Config {
@@ -61,6 +62,7 @@ func FromEnv() Config {
 		StripePricePro:     os.Getenv("STRIPE_PRICE_PRO"),
 		StripePriceTeam:    os.Getenv("STRIPE_PRICE_TEAM"),
 		HostedRewriteQuota: atoi(getenv("HOSTED_REWRITE_MONTHLY_QUOTA", "50")),
+		LanguageToolURL:    os.Getenv("LANGUAGETOOL_URL"),
 	}
 }
 

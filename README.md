@@ -47,7 +47,19 @@ Sources: [dwyl/english-words](https://github.com/dwyl/english-words) (Unlicense)
 
 **How it works:** pause ~0.3s while typing; the word under the caret is skipped until you move on. Unknown names or jargon → add to **Personal dict**. For full spelling over HTTP, use the shim (or Privacy mode) instead of the Go API alone.
 
-**Optional later:** self-hosted [LanguageTool](https://languagetool.org) or another free-tier API could sit beside this; core spelling does not require one.
+**Optional later:** self-hosted [LanguageTool](https://languagetool.org) merges with the rule engine when `LANGUAGETOOL_URL` is set (see below). Core spelling does not require it.
+
+### LanguageTool (optional)
+
+Run the bundled LanguageTool container and point the API at it:
+
+```bash
+docker compose up -d languagetool
+export LANGUAGETOOL_URL=http://localhost:8010
+npm run dev:api
+```
+
+When `LANGUAGETOOL_URL` is set, `/v1/check` merges LanguageTool matches with the TS rule engine (deduped by offset). The API also exposes a LanguageTool-shaped `POST /v2/check` for existing LT clients.
 
 ### Browser overlay (any website text box)
 

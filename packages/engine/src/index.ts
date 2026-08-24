@@ -6,7 +6,9 @@ import type {
   DocumentStats,
   Match,
 } from "../../protocol/src/index";
+import { checkContextSpelling } from "./contextSpell.ts";
 import { checkSentenceMaking, isLegitPassive } from "./sentenceMaking.ts";
+import { analyzeTone } from "./tone.ts";
 import { knownWord, skipSpellToken, spellSuggestions } from "./spell.ts";
 
 export type { CheckRequest, CheckResponse, Match, Dialect };
@@ -47,6 +49,8 @@ const COMMON_TYPOS: Record<string, string> = {
   prefered: "preferred",
   refered: "referred",
   transfered: "transferred",
+  alot: "a lot",
+  expresso: "espresso",
 };
 
 const GB_TO_US: Record<string, string> = {
@@ -207,6 +211,28 @@ function countSyllables(word: string): number {
   let n = groups ? groups.length : 1;
   if (w.endsWith("e") && n > 1) n -= 1;
   return Math.max(1, n);
+}
+
+function spanKey(m: Match): string {
+  return `${m.offset}:${m.length}`;
+}
+
+/** Prefer phrase hints, then grammar homophones, over generic context-spell rules at the same span. */
+function spanPriority(ruleId: string): number {
+  if (ruleId.startsWith("SPELL_CONTEXT_PHRASE_")) return 3;
+  if (ruleId.startsWith("GRAMMAR_HOMOPHONE_")) return 2;
+  if (ruleId.startsWith("SPELL_CONTEXT_")) return 1;
+  return 0;
+}
+
+function collapseSpanDuplicates(matches: Match[]): Match[] {
+  const best = new Map<string, Match>();
+  for (const m of matches) {
+    const key = spanKey(m);
+    const prev = best.get(key);
+    if (!prev || spanPriority(m.ruleId) > spanPriority(prev.ruleId)) best.set(key, m);
+  }
+  return [...best.values()];
 }
 
 function push(
@@ -433,11 +459,68 @@ export function analyze(req: CheckRequest): CheckResponse {
 
   applyStyleGuide(text, req.styleGuide, matches);
 
-  matches.push(...checkSentenceMaking(text, (i) => isCodeRegion(text, i)));
+  {
+    const re = /\b\w+,\s+\w+\s+and\s+\w+\b/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(text))) {
+      if (isCodeRegion(text, m.index)) continue;
+      const andIdx = m[0].lastIndexOf(" and ");
+      if (andIdx < 0) continue;
+      push(
+        matches,
+        m.index + andIdx,
+        4,
+        "PUNCT_OXFORD_COMMA",
+        "punctuation",
+        "Consider an Oxford comma before “and” in a list of three or more.",
+        "A comma before the final “and” can reduce ambiguity: a, b, and c.",
+        [", and"],
+      );
+    }
+  }
 
-  matches.sort((a, b) => a.offset - b.offset || b.length - a.length);
+  {
+    const hasStraight = /"/.test(text);
+    const hasCurly = /[\u201c\u201d]/.test(text);
+    if (hasStraight && hasCurly) {
+      const re = /"/g;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(text))) {
+        if (isCodeRegion(text, m.index)) continue;
+        push(matches, m.index, 1, "PUNCT_QUOTE_MIXED", "punctuation", "Mixed quote styles — pick straight or curly quotes consistently.", "Stick to one quote style throughout.", ['"']);
+      }
+    }
+  }
+
+  {
+    const re = /;\s+[a-z]/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(text))) {
+      if (isCodeRegion(text, m.index)) continue;
+      const after = text.slice(m.index + 2, m.index + 20);
+      if (/^(?:e\.g\.|i\.e\.|etc\.|vs\.|cf\.)/.test(after)) continue;
+      push(
+        matches,
+        m.index,
+        1,
+        "PUNCT_SEMICOLON_LOWERCASE",
+        "punctuation",
+        "Semicolon before a lowercase clause — check this is intentional.",
+        "Semicolons join related independent clauses. A comma may work if the second part is not a full clause.",
+        [","],
+      );
+    }
+  }
+
+  const skip = (i: number) => isCodeRegion(text, i);
+  matches.push(...checkContextSpelling(text, skip));
+  matches.push(...checkSentenceMaking(text, skip));
+  matches.push(...analyzeTone(text, req.goals, skip).matches);
+
+  const collapsed = collapseSpanDuplicates(matches);
+  collapsed.sort((a, b) => a.offset - b.offset || b.length - a.length);
   const dedup: Match[] = [];
-  for (const m of matches) {
+  for (const m of collapsed) {
     const last = dedup[dedup.length - 1];
     if (last && m.offset < last.offset + last.length && m.ruleId === last.ruleId) continue;
     dedup.push(m);
@@ -468,3 +551,5 @@ export function applyReplacement(text: string, offset: number, length: number, r
 
 export { insertSuggestion, writingHelp } from "./writingHelp.ts";
 export { matchNearCaret } from "./caret.ts";
+export { analyzeTone } from "./tone.ts";
+export type { ToneAnalysis, ToneSignal } from "./tone.ts";

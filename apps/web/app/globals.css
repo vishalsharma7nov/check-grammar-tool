@@ -213,3 +213,30 @@ textarea.doc::selection {
 .coach-chips button:hover { border-color: var(--accent); color: var(--accent); }
 .coach-hint, .coach-empty { font-size: 0.78rem; color: var(--muted); }
 .coach-empty { margin: 0.55rem 0 0; }
+.coach-wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 0.55rem; }
+.tone-badge {
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 0.2rem 0.55rem; border-radius: 999px; border: 1px solid var(--line); background: var(--panel);
+}
+.tone-formal { color: #175cd3; border-color: #b2ddff; background: #eff8ff; }
+.tone-casual { color: #b54708; border-color: #fedf89; background: #fffaeb; }
+.tone-confident { color: var(--accent); border-color: #99f6e4; background: #ecfdf5; }
+.rw-goals { font-size: 0.85rem; display: inline-flex; gap: 0.35rem; align-items: center; flex-wrap: wrap; }
+.rw-goal { display: inline-flex; align-items: center; gap: 0.15rem; cursor: pointer; }
+.rw-panel {
+  position: fixed; z-index: 45; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(640px, calc(100vw - 2rem)); background: #fff; border: 1px solid var(--line);
+  border-radius: 12px; box-shadow: 0 16px 48px rgba(28, 25, 23, 0.22); padding: 1rem 1.1rem;
+}
+.rw-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem; }
+.rw-head h3 { margin: 0; font-size: 1rem; font-family: var(--sans); }
+.rw-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+@media (max-width: 560px) { .rw-cols { grid-template-columns: 1fr; } }
+.rw-col { border: 1px solid var(--line); border-radius: 8px; padding: 0.65rem 0.75rem; background: #faf7f2; }
+.rw-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.rw-text { margin: 0.4rem 0 0; font-family: var(--sans); line-height: 1.55; font-size: 0.95rem; }
+.rw-removed { background: #fee4e2; text-decoration: line-through; color: #b42318; }
+.rw-added { background: #d1fadf; color: #067647; font-weight: 600; }
+.rw-meta { font-size: 0.75rem; color: var(--muted); margin: 0.5rem 0 0.65rem; }
+.rw-status { font-size: 0.9rem; color: var(--muted); margin: 0.5rem 0; }
+.rw-err { color: var(--spell); }

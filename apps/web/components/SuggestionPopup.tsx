@@ -21,6 +21,7 @@ type Props = {
   onClose: () => void;
   onDismiss: () => void;
   onIgnoreRule: () => void;
+  onAddToDictionary?: (word: string) => void;
 };
 
 export default function SuggestionPopup({
@@ -32,9 +33,11 @@ export default function SuggestionPopup({
   onClose,
   onDismiss,
   onIgnoreRule,
+  onAddToDictionary,
 }: Props) {
   const primary = match.replacements[0];
   const extras = match.replacements.slice(1, 4);
+  const canAddDict = match.category === "spelling" && onAddToDictionary && original.trim();
 
   return (
     <div
@@ -73,6 +76,11 @@ export default function SuggestionPopup({
         {primary != null && (
           <button type="button" className="primary" onClick={() => onAccept(primary)}>
             Accept
+          </button>
+        )}
+        {canAddDict && (
+          <button type="button" onClick={() => onAddToDictionary(original.trim())}>
+            Add to dictionary
           </button>
         )}
         <button type="button" onClick={onDismiss}>
