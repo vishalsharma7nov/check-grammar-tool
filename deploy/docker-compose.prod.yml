@@ -1,0 +1,35 @@
+# Production-like local stack — use with root docker-compose.yml:
+#   cp deploy/.env.production.example .env.prod
+#   # edit .env.prod (JWT_SECRET, WEB_ORIGIN, etc.)
+#   docker compose --env-file .env.prod \
+#     -f docker-compose.yml -f deploy/docker-compose.prod.yml up --build -d
+#
+# Ollama still runs on the host (not in Docker on macOS). Point LLM_BASE_URL at host.docker.internal:8081
+# after `npm run llm:serve` or a local Ollama install.
+
+services:
+  languagetool:
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+
+  api:
+    restart: unless-stopped
+    environment:
+      API_PUBLIC_URL: ${API_PUBLIC_URL:-http://localhost:8080}
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env.prod}
+      LANGUAGETOOL_URL: ${LANGUAGETOOL_URL:-http://languagetool:8010}
+      LLM_PROVIDER: ${LLM_PROVIDER:-local}
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://host.docker.internal:8081/v1}
+      LLM_MODEL: ${LLM_MODEL:-llama3.2}
+      BILLING_ENABLED: ${BILLING_ENABLED:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+
+  web:
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
+      NEXT_PUBLIC_DEFAULT_MODE: ${NEXT_PUBLIC_DEFAULT_MODE:-enhanced}

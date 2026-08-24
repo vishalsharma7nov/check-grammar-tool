@@ -2,17 +2,75 @@
 <meta charset="utf-8" />
 <title>Check Grammar</title>
 <style>
-  body { font: 14px/1.45 system-ui; width: 300px; margin: 12px; color: #1c1917; }
-  h1 { font-size: 16px; margin: 0 0 8px; }
-  ol { padding-left: 1.2rem; margin: 0.4rem 0 0.8rem; }
-  a { color: #0f6b5c; }
+  :root {
+    --ink: #0f172a;
+    --muted: #64748b;
+    --primary: #2563eb;
+    --accent: #0d9488;
+    --line: #e2e8f0;
+    --radius: 8px;
+  }
+  body {
+    font: 14px/1.45 system-ui, -apple-system, sans-serif;
+    width: 320px;
+    margin: 0;
+    padding: 16px;
+    color: var(--ink);
+  }
+  .head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .logo {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background: var(--primary);
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  h1 { font-size: 16px; margin: 0; font-weight: 600; }
+  .tag { font-size: 11px; color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  p { margin: 0 0 10px; color: var(--muted); font-size: 13px; }
+  ol { padding-left: 1.2rem; margin: 0 0 12px; font-size: 13px; color: var(--ink); }
+  li { margin-bottom: 4px; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+  a.btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: var(--radius);
+    text-decoration: none;
+    border: 1px solid var(--line);
+    color: var(--ink);
+  }
+  a.btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+  a.btn:hover { filter: brightness(0.97); }
+  .foot { font-size: 11px; color: var(--muted); margin-top: 10px; }
 </style>
-<h1>Check Grammar</h1>
-<p>This overlay checks <strong>as you type</strong> in text fields (Mail in the browser, Slack web, LinkedIn, this editor). Sentence structure, spelling, and next-word chips stay on this computer.</p>
+<div class="head">
+  <div class="logo" aria-hidden>CG</div>
+  <div>
+    <p class="tag">Privacy-first</p>
+    <h1>Check Grammar</h1>
+  </div>
+</div>
+<p>Checks spelling, grammar, and next-word hints <strong>on this computer</strong> as you type in text fields.</p>
 <ol>
-  <li>Keep this extension enabled.</li>
-  <li>Click a text box and pause briefly — underlines and a card appear.</li>
-  <li>Tab inserts the first next-word chip.</li>
+  <li>Click a text box and pause briefly — underlines appear.</li>
+  <li>Click an underline for fix suggestions.</li>
+  <li><kbd>Tab</kbd> inserts the first next-word chip.</li>
 </ol>
-<p>Native Mac apps (Notes, Mail.app) cannot be read without Accessibility. Type in the <a href="http://localhost:3000/live" target="_blank">live pad</a> or in the browser.</p>
-<p>Google Docs is unsupported. Not affiliated with Grammarly.</p>
+<div class="actions">
+  <a class="btn primary" href="options.html" target="_blank">Options</a>
+  <a class="btn" href="http://localhost:3000/live" target="_blank">Live pad</a>
+</div>
+<p class="foot">Google Docs unsupported. Not affiliated with Grammarly.</p>

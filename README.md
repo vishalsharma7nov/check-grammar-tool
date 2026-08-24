@@ -81,6 +81,27 @@ Deploy the **web editor only** (Privacy mode) for free. Full steps and requireme
 | --- | --- |
 | Editor, spelling, grammar, next-word (in browser) | Go API, local LLM, extension store, desktop/Notes overlay |
 
+## Deploy Enhanced mode for free
+
+Pair **Vercel** (editor) with a **free/cheap API host** (Render, Fly.io, or Railway) for Enhanced grammar via LanguageTool — no paid LLM APIs.
+
+| Setup | Est. Grammarly parity | Cost |
+| --- | --- | --- |
+| Vercel Privacy only | ~50–55% | Free |
+| Vercel + Render API + LanguageTool | ~63–68% | Free API tier + LT starter (~$7/mo on Render) |
+| Local Docker + host Ollama | ~70–78% | Free (your hardware) |
+
+**Step-by-step (Render + Vercel):**
+
+1. Render → **Blueprint** → repo → Blueprint path `deploy/render.yaml` → Apply.
+2. Set `WEB_ORIGIN` = your Vercel URL and `API_PUBLIC_URL` = Render API URL on the `check-grammar-api` service.
+3. Vercel → project env `NEXT_PUBLIC_API_URL` = Render API URL → redeploy.
+4. Open the site → **Enhanced** mode. Verify: `curl https://YOUR-API.onrender.com/healthz`.
+
+LanguageTool needs **≥1 GB RAM** (documented in [deploy/README.md](deploy/README.md)). Ollama on cloud free tier is not practical — use LT + rules on Render (~65%) or local Ollama for full Enhanced.
+
+Full guide: **[deploy/README.md](deploy/README.md)** (Fly.io, Railway, local prod Docker, Ollama tunnel).
+
 Self-host everything except the LLM (Metal cannot run inside Docker on macOS):
 
 ```bash

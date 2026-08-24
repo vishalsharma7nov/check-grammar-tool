@@ -1,0 +1,42 @@
+# Fly.io — Check Grammar API (optional free-tier host)
+# Usage:
+#   fly launch --config deploy/fly.toml --no-deploy
+#   fly secrets set WEB_ORIGIN=https://your-app.vercel.app JWT_SECRET=$(openssl rand -hex 32)
+#   fly secrets set LANGUAGETOOL_URL=http://check-grammar-lt.internal:8010   # if LT app exists
+#   fly deploy --config deploy/fly.toml
+#
+# Free allowance (~2025): a few shared-cpu VMs with 256 MB each — enough for API only.
+# LanguageTool needs ~1 GB: deploy a second app (deploy/fly.languagetool.toml) or use Render LT.
+
+app = "check-grammar-api"
+primary_region = "iad"
+
+[build]
+  dockerfile = "server/api/Dockerfile"
+
+[env]
+  API_ADDR = ":8080"
+  CHECK_ENGINE_CLI = "/app/server/shim/check-cli.mjs"
+  BILLING_ENABLED = "false"
+  LOG_LEVEL = "info"
+  LLM_PROVIDER = "local"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+  [[http_service.checks]]
+    grace_period = "20s"
+    interval = "30s"
+    method = "GET"
+    path = "/healthz"
+    timeout = "5s"
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1

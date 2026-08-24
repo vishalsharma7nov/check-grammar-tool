@@ -1,0 +1,32 @@
+# Fly.io — LanguageTool sidecar (optional; ~1 GB RAM)
+# Usage:
+#   fly apps create check-grammar-lt
+#   fly deploy --config deploy/fly.languagetool.toml --app check-grammar-lt
+#   fly ips allocate-v6 --app check-grammar-lt   # optional; keep internal-only via .internal DNS
+#
+# Wire API: LANGUAGETOOL_URL=http://check-grammar-lt.internal:8010
+
+app = "check-grammar-lt"
+primary_region = "iad"
+
+[build]
+  image = "silviof/docker-languagetool:latest"
+
+[env]
+  Java_Xms = "512m"
+  Java_Xmx = "1g"
+
+[[services]]
+  internal_port = 8010
+  protocol = "tcp"
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[services.ports]]
+    port = 8010
+
+[[vm]]
+  memory = "1024mb"
+  cpu_kind = "shared"
+  cpus = 1

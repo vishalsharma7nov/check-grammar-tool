@@ -1,0 +1,21 @@
+# Railway one-service deploy (API only)
+# Multi-service (API + LanguageTool) is easier via Railway dashboard → New Project → Docker.
+#
+# Quick start:
+#   1. railway.com → New Project → Deploy from GitHub repo
+#   2. Add service → Dockerfile path: server/api/Dockerfile, root directory: repo root
+#   3. Variables: see deploy/.env.production.example
+#   4. Add second service: image silviof/docker-languagetool:latest, port 8010, ≥1 GB RAM
+#   5. Set LANGUAGETOOL_URL to the LT service private URL
+#
+# Railway free trial credits expire; Hobby plan ~$5/mo after trial — no always-free tier like Vercel.
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "server/api/Dockerfile"
+
+[deploy]
+healthcheckPath = "/healthz"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3

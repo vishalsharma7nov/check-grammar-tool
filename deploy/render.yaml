@@ -1,0 +1,53 @@
+# Render Blueprint — Check Grammar API + LanguageTool
+# Dashboard: New → Blueprint → connect repo → set Blueprint path to deploy/render.yaml
+#
+# RAM notes (Render plans, 2025):
+#   - Free web service: 512 MB — enough for the Go API + TS engine shim only.
+#   - LanguageTool (Java heap 512m–1g): needs ≥1 GB RAM — use starter plan or run LT elsewhere.
+#   - Ollama / GPU LLM: not feasible on Render free tier; use rule stub or tunnel to your machine.
+#
+# After deploy: set WEB_ORIGIN to your Vercel URL (e.g. https://your-app.vercel.app).
+
+services:
+  # Private LanguageTool — internal only; API reaches it via Render private network.
+  - type: pserv
+    name: languagetool
+    runtime: image
+    image:
+      url: docker.io/silviof/docker-languagetool:latest
+    # Starter (512 MB) may OOM under load; bump to Standard (2 GB) if LT restarts.
+    plan: starter
+    envVars:
+      - key: Java_Xms
+        value: 512m
+      - key: Java_Xmx
+        value: 1g
+
+  - type: web
+    name: check-grammar-api
+    runtime: docker
+    dockerfilePath: server/api/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /healthz
+    envVars:
+      - key: API_ADDR
+        value: :8080
+      - key: CHECK_ENGINE_CLI
+        value: /app/server/shim/check-cli.mjs
+      - key: BILLING_ENABLED
+        value: "false"
+      - key: LOG_LEVEL
+        value: info
+      - key: LLM_PROVIDER
+        value: local
+      # No cloud LLM on free tier — leave LLM_BASE_URL unset; API uses rule engine + LT only.
+      - key: LANGUAGETOOL_URL
+        value: http://languagetool:8010
+      - key: JWT_SECRET
+        generateValue: true
+      # Set in Render dashboard after Vercel deploy (required for CORS):
+      - key: WEB_ORIGIN
+        sync: false
+      - key: API_PUBLIC_URL
+        sync: false

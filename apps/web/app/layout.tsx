@@ -33,7 +33,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             Check Grammar
           </Link>
           <nav>
-            <Link href="/">Editor</Link>
+            <Link href="/">Home</Link>
+            <Link href="/#editor">Editor</Link>
             <Link href="/live">Live pad</Link>
             <Link href="/privacy">Privacy</Link>
             <Link href="/pricing">Pricing</Link>

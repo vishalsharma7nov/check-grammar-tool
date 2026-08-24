@@ -1,11 +1,28 @@
 {
   "manifest_version": 3,
-  "name": "Check Grammar",
+  "name": "Check Grammar — Privacy-first writing assistant",
   "version": "0.1.0",
-  "description": "As you type: sentence structure, spelling, and next-word hints. On-device. Not affiliated with Grammarly.",
+  "description": "Free spelling, grammar, and next-word hints as you type. On-device by default — your text stays on your computer. Self-host Enhanced mode with LanguageTool + Ollama. Not affiliated with Grammarly.",
   "permissions": ["storage", "contextMenus"],
   "host_permissions": ["http://127.0.0.1:8080/*", "http://localhost:8080/*"],
-  "action": { "default_popup": "popup.html", "default_title": "Check Grammar" },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Check Grammar",
+    "default_icon": {
+      "16": "icons/icon.svg",
+      "48": "icons/icon.svg",
+      "128": "icons/icon.svg"
+    }
+  },
+  "icons": {
+    "16": "icons/icon.svg",
+    "48": "icons/icon.svg",
+    "128": "icons/icon.svg"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
   "background": { "service_worker": "background.js" },
   "content_scripts": [
     {

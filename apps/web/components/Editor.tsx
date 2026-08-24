@@ -25,11 +25,12 @@ import {
   fetchEnhancedCapabilities,
   type EnhancedCapabilities,
 } from "../lib/enhancedCheck";
+import { applyAllCorrections, copyToClipboard, downloadText } from "../lib/exportCorrected";
+import { DEMO_TEXT, hasSeenOnboarding, markOnboardingSeen } from "../lib/onboarding";
+import OnboardingBanner from "./OnboardingBanner";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 const HAS_API_ENV = Boolean(process.env.NEXT_PUBLIC_API_URL);
-const SAMPLE =
-  "I recieve teh letter in order to do the needful. Please prepone the meeting and kindly revert. She ate a apple. He go to office yesterday. I working on that report. Because the deadline is near. i think its fine.";
 
 type EditorMode = "privacy" | "local" | "enhanced";
 
@@ -67,6 +68,8 @@ export default function Editor() {
   const [rewriteVariants, setRewriteVariants] = useState<RewriteVariant[]>([]);
   const [rewriteVariantIdx, setRewriteVariantIdx] = useState(0);
   const [rewriteSpan, setRewriteSpan] = useState<{ offset: number; length: number } | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [exportNote, setExportNote] = useState("");
   const taRef = useRef<HTMLTextAreaElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const highlightsRef = useRef<HTMLDivElement>(null);
@@ -81,6 +84,7 @@ export default function Editor() {
     const words = loadPersonalDictionary();
     setPersonalDict(words);
     setPersonalWords(words.join(", "));
+    setShowOnboarding(!hasSeenOnboarding());
   }, []);
 
   useEffect(() => {
@@ -281,18 +285,49 @@ export default function Editor() {
   }
 
   function loadExample() {
-    setText(SAMPLE);
-    caretRef.current = SAMPLE.length;
-    selRef.current = { start: SAMPLE.length, end: SAMPLE.length };
-    setCaret(SAMPLE.length);
+    setText(DEMO_TEXT);
+    caretRef.current = DEMO_TEXT.length;
+    selRef.current = { start: DEMO_TEXT.length, end: DEMO_TEXT.length };
+    setCaret(DEMO_TEXT.length);
     userClosed.current = false;
     setOpen(null);
     requestAnimationFrame(() => {
       const ta = taRef.current;
       if (!ta) return;
       ta.focus();
-      ta.setSelectionRange(SAMPLE.length, SAMPLE.length);
+      ta.setSelectionRange(DEMO_TEXT.length, DEMO_TEXT.length);
     });
+  }
+
+  function dismissOnboarding() {
+    markOnboardingSeen();
+    setShowOnboarding(false);
+  }
+
+  function tryExample() {
+    dismissOnboarding();
+    loadExample();
+  }
+
+  const correctedText = useMemo(
+    () => (text && matches.length ? applyAllCorrections(text, matches) : text),
+    [text, matches],
+  );
+
+  async function exportCopy() {
+    const payload = correctedText || text;
+    if (!payload) return;
+    const ok = await copyToClipboard(payload);
+    setExportNote(ok ? "Copied to clipboard" : "Copy failed — try Download");
+    window.setTimeout(() => setExportNote(""), 2500);
+  }
+
+  function exportDownload() {
+    const payload = correctedText || text;
+    if (!payload) return;
+    downloadText(payload);
+    setExportNote("Download started");
+    window.setTimeout(() => setExportNote(""), 2500);
   }
 
   function closePopup() {
@@ -492,6 +527,7 @@ export default function Editor() {
 
   return (
     <div className="editor-wrap">
+      {showOnboarding && <OnboardingBanner onDismiss={dismissOnboarding} onTryExample={tryExample} />}
       {showCapabilityBanner && (
         <div className="enhanced-banner" role="status">
           <span>
@@ -595,7 +631,13 @@ export default function Editor() {
               Recheck
             </button>
             <button type="button" className="ghost" onClick={loadExample}>
-              Load example
+              Try example
+            </button>
+            <button type="button" className="secondary" onClick={exportCopy} disabled={!text}>
+              Copy corrected
+            </button>
+            <button type="button" className="secondary" onClick={exportDownload} disabled={!text}>
+              Download
             </button>
           </div>
         </div>
@@ -633,9 +675,10 @@ export default function Editor() {
             }}
             onSelect={markCaret}
             onKeyDown={(e) => {
-              if (e.key === "Tab" && help.next[0]) {
+              const chip = help.next[0];
+              if (e.key === "Tab" && chip) {
                 e.preventDefault();
-                pickWord(help.next[0]);
+                pickWord(chip);
               }
             }}
             onClick={(e) => {
@@ -688,6 +731,7 @@ export default function Editor() {
             {res.llm?.used && <span className="stat-chip">LLM ({res.llm.provider})</span>}
           </div>
         )}
+        {exportNote && <p className="stats stats-export">{exportNote}</p>}
         {err && <p className="stats stats-err">{err}</p>}
         {fallbackNote && <p className="stats stats-fallback">{fallbackNote}</p>}
       </div>

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Check Grammar">
+  <rect width="128" height="128" rx="24" fill="#2563eb"/>
+  <path d="M36 88V40h12l20 32 20-32h12v48h-12V58l-18 28h-4L38 58v30H36z" fill="#fff"/>
+  <path d="M36 96h56" stroke="#93c5fd" stroke-width="4" stroke-linecap="round"/>
+</svg>

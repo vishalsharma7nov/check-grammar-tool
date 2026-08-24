@@ -1,4 +1,5 @@
 services:
+  # Production-like override: deploy/docker-compose.prod.yml + deploy/.env.production.example
   languagetool:
     image: silviof/docker-languagetool:latest
     ports: ["8010:8010"]
