@@ -61,6 +61,21 @@ npm run dev:api
 
 When `LANGUAGETOOL_URL` is set, `/v1/check` merges LanguageTool matches with the TS rule engine (deduped by offset). The API also exposes a LanguageTool-shaped `POST /v2/check` for existing LT clients.
 
+### Plagiarism / originality check (optional, free tier)
+
+**Check plagiarism** in the editor compares your text against published web sources and links each match so you can **cite it** — it detects overlap, it never helps hide it. It needs the API (Local API or Enhanced mode); Privacy mode shows a note instead of sending text anywhere.
+
+1. Register at [Winston AI](https://gowinston.ai) → free API credits at signup, **no credit card** (plagiarism checks cost 2 credits/word).
+2. Dashboard → API tokens → create a token.
+3. Set it and restart the API:
+
+```bash
+export PLAGIARISM_API_KEY=your-token   # provider defaults to winston
+npm run dev:api   # or dev:shim — both serve POST /v1/plagiarism
+```
+
+Without a key the endpoint still answers `200` with `skippedReason: "no provider configured"`, and the editor explains how to get a free key. Alternatives: `PLAGIARISM_PROVIDER=prepostseo` ([Prepostseo API](https://www.prepostseo.com/apis), free tier) or `PLAGIARISM_PROVIDER=generic` with `PLAGIARISM_API_URL` pointing at any REST endpoint that accepts `{"text"}` and returns `{score, matches: [{text, url, similarity}]}`.
+
 ### Browser overlay (any website text box)
 
 ```bash

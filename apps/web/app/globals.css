@@ -933,6 +933,76 @@ textarea.doc::selection {
 .rw-status { font-size: var(--text-sm); color: var(--muted); margin: var(--space-3) 0; }
 .rw-err { color: var(--spell); }
 
+/* ── Plagiarism panel ──────────────────────────────────────────── */
+.plg-score-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+.plg-score {
+  flex-shrink: 0;
+  min-width: 72px;
+  height: 72px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+.plg-low { background: #dcfce7; color: #15803d; }
+.plg-mid { background: #fef9c3; color: #a16207; }
+.plg-high { background: #fee2e2; color: #b91c1c; }
+.plg-summary {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--ink);
+}
+.plg-sources { margin-top: var(--space-2); }
+.plg-source-list {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.plg-source {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-muted);
+  font-size: var(--text-sm);
+}
+.plg-source a {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+  word-break: break-word;
+}
+.plg-source a:hover { text-decoration: underline; }
+.plg-sim {
+  margin-left: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+.plg-excerpt {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xs);
+  color: var(--ink-secondary);
+  font-style: italic;
+}
+.plg-nudge {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-xs);
+  line-height: 1.6;
+  color: var(--muted);
+}
+
 /* ── Static pages ──────────────────────────────────────────────── */
 .page {
   max-width: 720px;

@@ -26,6 +26,9 @@ import {
   type EnhancedCapabilities,
 } from "../lib/enhancedCheck";
 import { applyAllCorrections, copyToClipboard, downloadText } from "../lib/exportCorrected";
+import PlagiarismPanel from "./PlagiarismPanel";
+import { checkPlagiarism, PRIVACY_MODE_MESSAGE } from "../lib/plagiarism";
+import type { PlagiarismResult } from "@check-grammar/protocol";
 import { DEMO_TEXT, hasSeenOnboarding, markOnboardingSeen } from "../lib/onboarding";
 import OnboardingBanner from "./OnboardingBanner";
 
@@ -68,6 +71,11 @@ export default function Editor() {
   const [rewriteVariants, setRewriteVariants] = useState<RewriteVariant[]>([]);
   const [rewriteVariantIdx, setRewriteVariantIdx] = useState(0);
   const [rewriteSpan, setRewriteSpan] = useState<{ offset: number; length: number } | null>(null);
+  const [plagOpen, setPlagOpen] = useState(false);
+  const [plagLoading, setPlagLoading] = useState(false);
+  const [plagError, setPlagError] = useState("");
+  const [plagModeNote, setPlagModeNote] = useState("");
+  const [plagResult, setPlagResult] = useState<PlagiarismResult | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [exportNote, setExportNote] = useState("");
   const [checking, setChecking] = useState(false);
@@ -446,6 +454,25 @@ export default function Editor() {
     }
   }
 
+  async function runPlagiarismCheck() {
+    setPlagOpen(true);
+    setPlagError("");
+    setPlagResult(null);
+    if (mode === "privacy") {
+      setPlagModeNote(PRIVACY_MODE_MESSAGE);
+      return;
+    }
+    setPlagModeNote("");
+    setPlagLoading(true);
+    try {
+      setPlagResult(await checkPlagiarism(API, text));
+    } catch (e) {
+      setPlagError(`Plagiarism check failed: ${String(e)}`);
+    } finally {
+      setPlagLoading(false);
+    }
+  }
+
   function selectRewriteVariant(index: number) {
     const v = rewriteVariants[index];
     if (!v) return;
@@ -511,6 +538,7 @@ export default function Editor() {
       if (e.key === "Escape") {
         closePopup();
         setRewriteOpen(false);
+        setPlagOpen(false);
       }
     };
     const onDown = (e: MouseEvent) => {
@@ -653,6 +681,19 @@ export default function Editor() {
             </button>
             <button type="button" className="ghost" onClick={loadExample}>
               Try example
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              onClick={runPlagiarismCheck}
+              disabled={!text}
+              title={
+                mode === "privacy"
+                  ? "Requires Local API or Enhanced mode"
+                  : "Compare your text against published sources so you can cite them"
+              }
+            >
+              Check plagiarism
             </button>
             <button type="button" className="secondary" onClick={exportCopy} disabled={!text}>
               Copy corrected
@@ -859,6 +900,15 @@ export default function Editor() {
             setOpen(null);
           }}
           onAddToDictionary={addWordToDictionary}
+        />
+      )}
+      {plagOpen && (
+        <PlagiarismPanel
+          result={plagResult}
+          loading={plagLoading}
+          error={plagError}
+          modeNote={plagModeNote}
+          onClose={() => setPlagOpen(false)}
         />
       )}
       {rewriteOpen && (

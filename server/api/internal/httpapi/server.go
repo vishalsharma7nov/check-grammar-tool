@@ -20,6 +20,7 @@ import (
 	"github.com/checkgrammar/check-grammar/server/api/internal/check"
 	"github.com/checkgrammar/check-grammar/server/api/internal/config"
 	"github.com/checkgrammar/check-grammar/server/api/internal/llm"
+	"github.com/checkgrammar/check-grammar/server/api/internal/plagiarism"
 )
 
 type Server struct {
@@ -55,6 +56,7 @@ func Listen(cfg config.Config) error {
 	r.Post("/v1/check", s.check)
 	r.Post("/v2/check", s.checkLT)
 	r.Post("/v1/rewrite", s.rewrite)
+	r.Post("/v1/plagiarism", s.plagiarism)
 	r.Post("/v1/auth/register", s.register)
 	r.Post("/v1/auth/login", s.login)
 	r.Post("/v1/billing/checkout", s.checkout)
@@ -104,8 +106,38 @@ func (s *Server) healthPayload() map[string]any {
 				"model":      llmStatus.Model,
 				"models":     llmStatus.Models,
 			},
+			"plagiarism": map[string]any{
+				"configured": plagiarism.Configured(s.plagiarismConfig()),
+				"provider":   plagiarism.ResolvedProvider(s.plagiarismConfig()),
+			},
 		},
 	}
+}
+
+func (s *Server) plagiarismConfig() plagiarism.Config {
+	return plagiarism.Config{
+		Provider: s.cfg.PlagiarismProvider,
+		APIKey:   s.cfg.PlagiarismAPIKey,
+		APIURL:   s.cfg.PlagiarismAPIURL,
+	}
+}
+
+// plagiarism runs an originality/similarity check so writers can find and cite
+// sources. Missing configuration returns 200 with skippedReason, not an error.
+func (s *Server) plagiarism(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Text string `json:"text"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid json", 400)
+		return
+	}
+	res, err := plagiarism.Check(r.Context(), s.plagiarismConfig(), req.Text)
+	if err != nil {
+		http.Error(w, err.Error(), 502)
+		return
+	}
+	writeJSON(w, 200, res)
 }
 
 func (s *Server) dataPath(w http.ResponseWriter, r *http.Request) {

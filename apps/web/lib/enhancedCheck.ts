@@ -13,6 +13,10 @@ export interface EnhancedCapabilities extends ApiHealth {
       error?: string;
     };
     llm?: LlmHealth;
+    plagiarism?: {
+      configured: boolean;
+      provider: string;
+    };
   };
   llmProvider?: string;
   llmBaseUrl?: string;

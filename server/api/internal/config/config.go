@@ -31,6 +31,9 @@ type Config struct {
 	StripePriceTeam   string
 	HostedRewriteQuota int
 	LanguageToolURL    string
+	PlagiarismProvider string
+	PlagiarismAPIKey   string
+	PlagiarismAPIURL   string
 }
 
 func FromEnv() Config {
@@ -67,6 +70,9 @@ func FromEnv() Config {
 		StripePriceTeam:    os.Getenv("STRIPE_PRICE_TEAM"),
 		HostedRewriteQuota: atoi(getenv("HOSTED_REWRITE_MONTHLY_QUOTA", "50")),
 		LanguageToolURL:    os.Getenv("LANGUAGETOOL_URL"),
+		PlagiarismProvider: os.Getenv("PLAGIARISM_PROVIDER"),
+		PlagiarismAPIKey:   os.Getenv("PLAGIARISM_API_KEY"),
+		PlagiarismAPIURL:   os.Getenv("PLAGIARISM_API_URL"),
 	}
 }
 

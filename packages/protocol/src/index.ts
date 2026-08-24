@@ -84,6 +84,36 @@ export interface RewriteResponse {
   variants?: RewriteVariant[];
 }
 
+export interface PlagiarismRequest {
+  text: string;
+}
+
+/** A passage that overlaps with a published source. */
+export interface PlagiarismMatch {
+  /** The overlapping passage from the checked text (may be empty if the provider only reports the source). */
+  text: string;
+  /** URL of the matching source, so the writer can review and cite it. */
+  url: string;
+  /** Title of the matching source page/document. */
+  title?: string;
+  /** 0–100: how much of the text overlaps with this source. */
+  similarity: number;
+}
+
+/**
+ * Result of an originality/similarity check. Intended to help writers find
+ * and cite sources for overlapping passages — not to evade detection.
+ */
+export interface PlagiarismResult {
+  /** 0–100: percentage of the text that matches published sources. */
+  score: number;
+  matches: PlagiarismMatch[];
+  /** Which provider produced the result: "winston" | "prepostseo" | "generic" | "none". */
+  provider: string;
+  /** Set (with an empty result) when the check was skipped, e.g. "no provider configured". */
+  skippedReason?: string;
+}
+
 export interface NextWordSuggestion {
   token: string;
   kind: "next" | "complete";
