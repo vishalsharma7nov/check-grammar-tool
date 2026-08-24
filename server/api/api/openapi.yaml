@@ -1,0 +1,85 @@
+openapi: 3.0.3
+info:
+  title: Check Grammar API
+  version: 0.1.0
+  description: |
+    Rule-based writing check. Core `/v1/check` is never paywalled.
+    Local LLM rewrite talks to a host process (llama.cpp / MLX), not Docker on macOS.
+paths:
+  /healthz:
+    get:
+      summary: Liveness
+      responses:
+        "200":
+          description: ok
+  /v1/check:
+    post:
+      summary: Check text
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckRequest"
+      responses:
+        "200":
+          description: matches
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckResponse"
+  /v1/rewrite:
+    post:
+      summary: Rewrite via local or hosted-our-weights LLM
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text: { type: string }
+                instruction: { type: string }
+                dialect: { type: string }
+                hosted: { type: boolean }
+  /v2/check:
+    post:
+      summary: LanguageTool-shaped compatibility
+  /v1/data-path:
+    get:
+      summary: Where text goes
+  /v1/entitlements:
+    get:
+      summary: Plan flags (rules always unlimited)
+components:
+  schemas:
+    CheckRequest:
+      type: object
+      required: [text]
+      properties:
+        text: { type: string }
+        dialect: { type: string, enum: [en-US, en-GB, en-CA, en-AU, en-IN] }
+        mode: { type: string, enum: [privacy, local, hosted] }
+        personalDictionary:
+          type: array
+          items: { type: string }
+        styleGuide: { type: string }
+        includeLLM: { type: boolean }
+        caret: { type: integer, description: "Caret offset; skip the in-progress word when strictly inside it" }
+    Match:
+      type: object
+      properties:
+        offset: { type: integer }
+        length: { type: integer }
+        ruleId: { type: string }
+        category: { type: string }
+        message: { type: string }
+        explanation: { type: string }
+        replacements:
+          type: array
+          items: { type: string }
+    CheckResponse:
+      type: object
+      properties:
+        matches:
+          type: array
+          items: { $ref: "#/components/schemas/Match" }

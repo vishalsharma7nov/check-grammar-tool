@@ -1,0 +1,8 @@
+extends: default
+rules:
+  - id: no-very
+    pattern: "\\bvery\\b"
+    message: "Avoid 'very'; pick a stronger adjective"
+  - id: no-thing
+    pattern: "\\ba lot of\\b"
+    message: "Prefer 'many' or 'much'"

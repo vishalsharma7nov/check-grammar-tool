@@ -1,0 +1,16 @@
+# ~60–80M fixer (T5-small class). Hard cap: not 125M on this Mac.
+model:
+  dim: 512
+  layers: 6
+  heads: 8
+  vocab: 8000
+  params_cap_million: 80
+train:
+  batch_size: 1
+  seq_len: 256
+  grad_accum: 32
+  steps: 12000
+  lr: 0.00015
+  device: mps
+data: ml/data/processed/gec_pairs.tsv
+out: ml/checkpoints/fixer-80m

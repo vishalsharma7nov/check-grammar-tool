@@ -1,0 +1,26 @@
+{
+  "name": "check-grammar",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Original local-first writing assistant (Apache-2.0)",
+  "workspaces": [
+    "apps/web",
+    "apps/extension",
+    "apps/vscode",
+    "packages/protocol",
+    "packages/engine"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev -w @check-grammar/web",
+    "dev:api": "cd server/api && go run ./cmd/api",
+    "dev:shim": "node --experimental-strip-types server/shim/check-server.mjs",
+    "test:engine": "node --experimental-strip-types --test packages/engine/src/engine.test.ts",
+    "eval": "node --experimental-strip-types --test packages/engine/src/engine.test.ts && node --experimental-strip-types eval/run.mjs",
+    "build": "npm run build -w @check-grammar/web",
+    "build:extension": "npm run build -w @check-grammar/extension"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "Apache-2.0"
+}

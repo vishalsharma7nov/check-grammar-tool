@@ -1,0 +1,15 @@
+# ~40M encoder detector. Do not raise dim/layers on 16GB without lowering seq_len.
+model:
+  dim: 384
+  layers: 8
+  heads: 6
+  vocab: 8000
+train:
+  batch_size: 1
+  seq_len: 256
+  grad_accum: 24
+  steps: 8000
+  lr: 0.0002
+  device: mps
+data: ml/data/processed/gec_pairs.tsv
+out: ml/checkpoints/detector-40m

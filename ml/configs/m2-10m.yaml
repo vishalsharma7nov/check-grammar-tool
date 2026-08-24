@@ -1,0 +1,15 @@
+# ~10M decoder proof. batch 1, seq 256, M2 16GB.
+model:
+  dim: 256
+  layers: 6
+  heads: 8
+  vocab: 8000
+train:
+  batch_size: 1
+  seq_len: 256
+  grad_accum: 16
+  steps: 2000
+  lr: 0.0003
+  device: mps
+data: ml/data/processed/corpus.txt
+out: ml/checkpoints/tiny-lm

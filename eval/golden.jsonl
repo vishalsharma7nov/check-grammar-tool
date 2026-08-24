@@ -1,0 +1,10 @@
+{"text":"I recieve teh letter.","expectRulePrefix":"SPELL"}
+{"text":"She ate a apple.","expectRule":"GRAMMAR_A_AN"}
+{"text":"Please prepone the meeting.","dialect":"en-US","expectRule":"DIALECT_PREPONE"}
+{"text":"ok\n```\nteh teh\n```\n","expectNoSpell":true}
+{"text":"This is very important.","styleGuide":"- id: no-very\n  pattern: very\n  message: Avoid very\n","expectRule":"no-very"}
+{"text":"He go to office.","expectRule":"GRAMMAR_SV_3SG"}
+{"text":"I working on that report.","expectRule":"GRAMMAR_MISSING_BE"}
+{"text":"She did went home.","expectRule":"GRAMMAR_DID_PAST"}
+{"text":"Because the deadline is near.","expectRule":"GRAMMAR_FRAGMENT"}
+{"text":"Why you are late?","expectRule":"GRAMMAR_QUESTION_ORDER"}

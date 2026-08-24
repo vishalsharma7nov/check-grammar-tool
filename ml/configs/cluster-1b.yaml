@@ -1,0 +1,14 @@
+# Cluster recipe — do NOT run on the 16GB M2.
+model:
+  dim: 2048
+  layers: 24
+  heads: 16
+  params_billion: 1.0
+train:
+  batch_size: 4
+  seq_len: 1024
+  devices: 8
+  backend: cuda
+data: /data/gec-mix
+out: s3://check-grammar/checkpoints/cluster-1b
+notes: "Same trainer code path as M2 configs; only YAML changes."

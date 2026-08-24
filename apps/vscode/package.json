@@ -1,0 +1,20 @@
+{
+  "name": "check-grammar",
+  "displayName": "Check Grammar",
+  "description": "Local-first writing diagnostics via /v1/check. Not affiliated with Grammarly.",
+  "version": "0.1.0",
+  "publisher": "check-grammar",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Linters"],
+  "activationEvents": ["onLanguage:markdown", "onLanguage:plaintext", "onLanguage:latex"],
+  "main": "./src/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Check Grammar",
+      "properties": {
+        "checkGrammar.apiUrl": { "type": "string", "default": "http://127.0.0.1:8080" },
+        "checkGrammar.dialect": { "type": "string", "default": "en-IN" }
+      }
+    }
+  }
+}

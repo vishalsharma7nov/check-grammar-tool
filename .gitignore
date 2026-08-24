@@ -1,0 +1,62 @@
+# Secrets
+.env
+.env.local
+*.pem
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build
+dist/
+build/
+.next/
+out/
+target/
+*.exe
+bin/
+coverage/
+.turbo/
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Models and datasets (too large for git)
+ml/data/raw/
+ml/data/processed/
+ml/checkpoints/
+ml/exports/*.gguf
+ml/exports/*.safetensors
+models/*.gguf
+models/*.safetensors
+*.pt
+*.pth
+*.npz
+
+# Go
+vendor/
+server/api/check-api
+
+# Python
+.venv/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Tauri
+apps/desktop/src-tauri/target/
+
+# VS Code extension vsix
+*.vsix
+
+# Regenerable dictionary dumps (bundled as packages/engine/src/wordlist.generated.ts)
+packages/engine/data/*.txt
+
+# Logs
+*.log
+npm-debug.log*
