@@ -70,6 +70,8 @@ export default function Editor() {
   const [rewriteSpan, setRewriteSpan] = useState<{ offset: number; length: number } | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [exportNote, setExportNote] = useState("");
+  const [checking, setChecking] = useState(false);
+  const [recheckFlash, setRecheckFlash] = useState("");
   const taRef = useRef<HTMLTextAreaElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const highlightsRef = useRef<HTMLDivElement>(null);
@@ -120,6 +122,7 @@ export default function Editor() {
   const run = useCallback(async () => {
     setErr("");
     setFallbackNote("");
+    setRecheckFlash("");
     const req = { text, dialect, styleGuide, caret: caretRef.current, personalDictionary, goals };
     if (mode === "privacy") {
       setRes(analyze(req));
@@ -138,6 +141,7 @@ export default function Editor() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(req),
+        signal: AbortSignal.timeout(12_000),
       });
       if (!r.ok) throw new Error(await r.text());
       setRes(await r.json());
@@ -146,6 +150,19 @@ export default function Editor() {
       setRes(analyze(req));
     }
   }, [text, dialect, mode, styleGuide, personalDictionary, goals, llmAvailable]);
+
+  const handleRecheck = useCallback(async () => {
+    setChecking(true);
+    try {
+      await run();
+      setRecheckFlash("Rechecked just now");
+      window.setTimeout(() => setRecheckFlash(""), 2500);
+    } catch (e) {
+      setErr(String(e));
+    } finally {
+      setChecking(false);
+    }
+  }, [run]);
 
   useEffect(() => {
     const t = setTimeout(run, 280);
@@ -390,10 +407,8 @@ export default function Editor() {
     setRewriteGoals((prev) => (prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]));
   }
 
-  async function runRewrite() {
-    const ta = taRef.current;
-    const start = ta?.selectionStart ?? caret;
-    const end = ta?.selectionEnd ?? selEnd;
+  async function handleRewrite() {
+    const { start, end } = selRef.current;
     const target = rewriteTarget(text, start, end);
     if (!target) {
       setRewriteError("Select text or place the caret in a sentence.");
@@ -410,20 +425,25 @@ export default function Editor() {
     setRewriteVariantIdx(0);
     setRewriteSpan({ offset: target.offset, length: target.length });
 
-    const useApi = mode === "local" || mode === "enhanced";
-    const out = useApi
-      ? await fetchRewrite(API, target.snippet, goalsActive, dialect)
-      : {
-          text: localRewrite(target.snippet, goalsActive),
-          provider: "rules",
-          variants: goalsActive.map((g) => ({ goal: g, text: localRewrite(target.snippet, [g]) })),
-        };
-    const variants = out.variants?.length ? out.variants : [{ goal: goalsActive[0], text: out.text }];
-    setRewriteVariants(variants);
-    setRewriteVariantIdx(0);
-    setRewriteSuggested(variants[0]?.text ?? out.text);
-    setRewriteProvider(out.provider);
-    setRewriteLoading(false);
+    try {
+      const useApi = mode === "local" || mode === "enhanced";
+      const out = useApi
+        ? await fetchRewrite(API, target.snippet, goalsActive, dialect)
+        : {
+            text: localRewrite(target.snippet, goalsActive),
+            provider: "rules",
+            variants: goalsActive.map((g) => ({ goal: g, text: localRewrite(target.snippet, [g]) })),
+          };
+      const variants = out.variants?.length ? out.variants : [{ goal: goalsActive[0], text: out.text }];
+      setRewriteVariants(variants);
+      setRewriteVariantIdx(0);
+      setRewriteSuggested(variants[0]?.text ?? out.text);
+      setRewriteProvider(out.provider);
+    } catch (e) {
+      setRewriteError(String(e));
+    } finally {
+      setRewriteLoading(false);
+    }
   }
 
   function selectRewriteVariant(index: number) {
@@ -499,6 +519,7 @@ export default function Editor() {
         t.closest(".sg-pop") ||
         t.closest(".rw-panel") ||
         t.closest(".rw-backdrop") ||
+        t.closest(".toolbar") ||
         t.closest("textarea.doc") ||
         t.closest(".issue") ||
         t.closest(".sg-badge") ||
@@ -621,14 +642,14 @@ export default function Editor() {
                 </label>
               ))}
             </span>
-            <button type="button" className="secondary" onClick={runRewrite}>
+            <button type="button" className="secondary" onClick={handleRewrite} disabled={!text.trim()}>
               Rewrite
             </button>
           </div>
           <div className="toolbar-divider" aria-hidden />
           <div className="toolbar-group toolbar-actions">
-            <button className="primary" type="button" onClick={run}>
-              Recheck
+            <button className="primary" type="button" onClick={handleRecheck} disabled={checking}>
+              {checking ? "Checking…" : "Recheck"}
             </button>
             <button type="button" className="ghost" onClick={loadExample}>
               Try example
@@ -674,6 +695,7 @@ export default function Editor() {
               }
             }}
             onSelect={markCaret}
+            onBlur={markCaret}
             onKeyDown={(e) => {
               const chip = help.next[0];
               if (e.key === "Tab" && chip) {
@@ -732,6 +754,7 @@ export default function Editor() {
           </div>
         )}
         {exportNote && <p className="stats stats-export">{exportNote}</p>}
+        {recheckFlash && <p className="stats stats-export">{recheckFlash}</p>}
         {err && <p className="stats stats-err">{err}</p>}
         {fallbackNote && <p className="stats stats-fallback">{fallbackNote}</p>}
       </div>

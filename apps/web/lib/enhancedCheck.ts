@@ -1,5 +1,6 @@
 import { analyze } from "@check-grammar/engine";
 import type { CheckRequest, CheckResponse } from "@check-grammar/protocol";
+import { fetchWithTimeout } from "./fetchTimeout";
 import type { ApiHealth, LlmHealth } from "./ollama";
 import { llmFromHealth } from "./ollama";
 
@@ -25,7 +26,7 @@ export type EnhancedCheckResult = {
 
 export async function fetchEnhancedCapabilities(apiUrl: string): Promise<EnhancedCapabilities | null> {
   try {
-    const r = await fetch(`${apiUrl.replace(/\/$/, "")}/healthz`);
+    const r = await fetchWithTimeout(`${apiUrl.replace(/\/$/, "")}/healthz`, undefined, 8_000);
     if (!r.ok) return null;
     return (await r.json()) as EnhancedCapabilities;
   } catch {
@@ -53,7 +54,7 @@ export async function enhancedCheck(
   const base = apiUrl.replace(/\/$/, "");
   const useLLM = (options?.includeLLM ?? true) && (options?.llmAvailable ?? true);
   try {
-    const r = await fetch(`${base}/v1/check`, {
+    const r = await fetchWithTimeout(`${base}/v1/check`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...req, includeLLM: useLLM }),

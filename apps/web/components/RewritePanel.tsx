@@ -41,6 +41,7 @@ export default function RewritePanel({
   onClose,
 }: Props) {
   const showVariants = variants.length > 1;
+  const unchanged = !loading && !error && Boolean(suggested) && suggested === original;
 
   return (
     <>
@@ -85,6 +86,9 @@ export default function RewritePanel({
             </div>
           </div>
           <p className="rw-meta">via {provider}</p>
+          {unchanged ? (
+            <p className="rw-status">No changes suggested for this text with the selected goals. Try another goal or edit the sentence.</p>
+          ) : null}
           <div className="sg-pop-actions">
             <button type="button" className="primary" onClick={onAccept} disabled={!suggested || suggested === original}>
               Accept

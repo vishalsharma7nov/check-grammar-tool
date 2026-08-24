@@ -203,6 +203,9 @@ header.app nav a.nav-active {
   max-width: 1280px;
   margin: 0 auto;
 }
+#editor {
+  scroll-margin-top: calc(var(--header-h) + var(--banner-h) + var(--space-4));
+}
 @media (max-width: 960px) {
   .editor-wrap { grid-template-columns: 1fr; padding: var(--space-4); }
 }
@@ -221,6 +224,8 @@ header.app nav a.nav-active {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xs);
+  position: relative;
+  z-index: 1;
 }
 .toolbar-group {
   display: flex;

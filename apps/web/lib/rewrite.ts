@@ -1,4 +1,5 @@
 import type { Dialect, RewriteVariant } from "@check-grammar/protocol";
+import { fetchWithTimeout } from "./fetchTimeout";
 
 export type RewriteGoal = "clarity" | "brevity" | "formality";
 
@@ -83,7 +84,7 @@ export async function fetchRewrite(
 ): Promise<RewriteResult> {
   const goalsActive = goals.length ? goals : (["clarity"] as RewriteGoal[]);
   try {
-    const r = await fetch(`${api}/v1/rewrite`, {
+    const r = await fetchWithTimeout(`${api.replace(/\/$/, "")}/v1/rewrite`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
