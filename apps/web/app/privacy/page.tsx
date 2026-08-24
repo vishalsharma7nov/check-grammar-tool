@@ -4,7 +4,16 @@ export default function PrivacyPage() {
       <h1>Where does my text go?</h1>
       <p>Check Grammar is local-first. This page matches the flags in the API.</p>
       <h2>Privacy mode (default)</h2>
-      <p>The TypeScript engine in <code>packages/engine</code> runs in your browser. Checking does not send text anywhere.</p>
+      <p>
+        The TypeScript engine in <code>packages/engine</code> runs in your browser. Spelling and grammar
+        checks do not send text anywhere.
+      </p>
+      <p>
+        <strong>Plagiarism check</strong> is opt-in: when you click <em>Check plagiarism</em>, text is sent
+        to the configured provider (Winston AI by default) via the Vercel route <code>POST /api/plagiarism</code>.
+        It is never automatic. Without <code>PLAGIARISM_API_KEY</code> on the server the button explains how to
+        add a free key.
+      </p>
       <h2>Local API</h2>
       <p>
         POST <code>/v1/check</code> on your machine or VPS. Optional rewrite calls <code>LLM_BASE_URL</code> (llama.cpp / MLX /

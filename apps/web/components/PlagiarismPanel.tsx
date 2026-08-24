@@ -7,8 +7,10 @@ type Props = {
   result: PlagiarismResult | null;
   loading: boolean;
   error: string;
-  /** Set when the check could not run in the current mode (e.g. Privacy). */
+  /** Set when the check could not run in the current mode (legacy; prefer hint). */
   modeNote: string;
+  /** Non-blocking context (e.g. Privacy mode opt-in). Shown above the result. */
+  hint?: string;
   onClose: () => void;
 };
 
@@ -18,7 +20,7 @@ function scoreTone(score: number): string {
   return "plg-high";
 }
 
-export default function PlagiarismPanel({ result, loading, error, modeNote, onClose }: Props) {
+export default function PlagiarismPanel({ result, loading, error, modeNote, hint, onClose }: Props) {
   const skipped = result ? skippedMessage(result) : "";
 
   return (
@@ -31,6 +33,7 @@ export default function PlagiarismPanel({ result, loading, error, modeNote, onCl
             ×
           </button>
         </div>
+        {hint && !modeNote && <p className="rw-meta plg-hint">{hint}</p>}
         {loading ? (
           <p className="rw-status">Comparing against published sources…</p>
         ) : error ? (

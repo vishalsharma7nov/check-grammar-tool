@@ -63,7 +63,11 @@ When `LANGUAGETOOL_URL` is set, `/v1/check` merges LanguageTool matches with the
 
 ### Plagiarism / originality check (optional, free tier)
 
-**Check plagiarism** in the editor compares your text against published web sources and links each match so you can **cite it** — it detects overlap, it never helps hide it. It needs the API (Local API or Enhanced mode); Privacy mode shows a note instead of sending text anywhere.
+**Check plagiarism** in the editor compares your text against published web sources and links each match so you can **cite it** — it detects overlap, it never helps hide it. Text is sent only when you click the button (opt-in).
+
+**Vercel (no Render required):** set `PLAGIARISM_API_KEY` in the Vercel project env (server-side, **not** `NEXT_PUBLIC_`). The web app calls same-origin `POST /api/plagiarism`. See [docs/vercel.md](docs/vercel.md).
+
+**Local Go API:**
 
 1. Register at [Winston AI](https://gowinston.ai) → free API credits at signup, **no credit card** (plagiarism checks cost 2 credits/word).
 2. Dashboard → API tokens → create a token.
@@ -88,9 +92,9 @@ Chrome → `chrome://extensions` → Load unpacked → `apps/extension`. Then ty
 
 Deploy the **web editor only** (Privacy mode) for free. Full steps and requirements: [docs/vercel.md](docs/vercel.md).
 
-**Checklist:** GitHub repo · Vercel account · Node 20 · Root Directory = `apps/web` · commit `packages/engine/src/wordlist.generated.ts` · no env vars needed.
+**Checklist:** GitHub repo · Vercel account · Node 20 · Root Directory = `apps/web` · commit `packages/engine/src/wordlist.generated.ts` · no env vars needed for grammar; optional `PLAGIARISM_API_KEY` for plagiarism (server-side only).
 
-**Quick steps:** Import the repo on [vercel.com/new](https://vercel.com/new) → set Root Directory to `apps/web` → Deploy. Use **Privacy (in-browser)** on the live site.
+**Quick steps:** Import the repo on [vercel.com/new](https://vercel.com/new) → set Root Directory to `apps/web` → Deploy. Use **Privacy (in-browser)** on the live site. For plagiarism without Render, set `PLAGIARISM_API_KEY` in Vercel env and redeploy.
 
 | On Vercel | Not on Vercel |
 | --- | --- |

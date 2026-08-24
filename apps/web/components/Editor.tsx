@@ -27,7 +27,7 @@ import {
 } from "../lib/enhancedCheck";
 import { applyAllCorrections, copyToClipboard, downloadText } from "../lib/exportCorrected";
 import PlagiarismPanel from "./PlagiarismPanel";
-import { checkPlagiarism, PRIVACY_MODE_MESSAGE } from "../lib/plagiarism";
+import { checkPlagiarism, PLAGIARISM_OPT_IN_MESSAGE } from "../lib/plagiarism";
 import type { PlagiarismResult } from "@check-grammar/protocol";
 import { DEMO_TEXT, hasSeenOnboarding, markOnboardingSeen } from "../lib/onboarding";
 import OnboardingBanner from "./OnboardingBanner";
@@ -458,10 +458,6 @@ export default function Editor() {
     setPlagOpen(true);
     setPlagError("");
     setPlagResult(null);
-    if (mode === "privacy") {
-      setPlagModeNote(PRIVACY_MODE_MESSAGE);
-      return;
-    }
     setPlagModeNote("");
     setPlagLoading(true);
     try {
@@ -689,7 +685,7 @@ export default function Editor() {
               disabled={!text}
               title={
                 mode === "privacy"
-                  ? "Requires Local API or Enhanced mode"
+                  ? "Sends text to Winston AI only when you click (opt-in). Grammar stays in-browser."
                   : "Compare your text against published sources so you can cite them"
               }
             >
@@ -908,6 +904,7 @@ export default function Editor() {
           loading={plagLoading}
           error={plagError}
           modeNote={plagModeNote}
+          hint={mode === "privacy" ? PLAGIARISM_OPT_IN_MESSAGE : undefined}
           onClose={() => setPlagOpen(false)}
         />
       )}
