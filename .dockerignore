@@ -1,0 +1,14 @@
+.git
+.github
+**node_modules
+apps/extension
+apps/vscode
+apps/web/.next
+ml
+eval
+.cursor
+**/*.md
+!packages/**/README.md
+agent-transcripts
+*.log
+.DS_Store

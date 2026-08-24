@@ -6,7 +6,7 @@ import type {
   DocumentStats,
   Match,
 } from "../../protocol/src/index";
-import { checkSentenceMaking } from "./sentenceMaking.ts";
+import { checkSentenceMaking, isLegitPassive } from "./sentenceMaking.ts";
 import { knownWord, skipSpellToken, spellSuggestions } from "./spell.ts";
 
 export type { CheckRequest, CheckResponse, Match, Dialect };
@@ -414,6 +414,7 @@ export function analyze(req: CheckRequest): CheckResponse {
     let passive = 0;
     while ((m = re.exec(text))) {
       if (isCodeRegion(text, m.index)) continue;
+      if (isLegitPassive(m[0])) continue;
       passive += 1;
       if (passive <= 8) {
         push(

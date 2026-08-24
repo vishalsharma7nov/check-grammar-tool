@@ -67,6 +67,13 @@ export function spellSuggestions(word: string, extra: string[] = []): string[] {
   for (const e of edits1(lower)) {
     if (set.has(e) && e !== lower) found.add(e);
   }
+  if (found.size === 0 && lower.length <= 14) {
+    for (const e1 of edits1(lower)) {
+      for (const e2 of edits1(e1)) {
+        if (set.has(e2) && e2 !== lower) found.add(e2);
+      }
+    }
+  }
   const ranked = [...found].sort(
     (a, b) => rankOf(a) - rankOf(b) || a.length - b.length || a.localeCompare(b),
   );
@@ -78,10 +85,6 @@ export function skipSpellToken(text: string, index: number, word: string, caret?
   if (word.length <= 1) return true;
   if (/^[A-Z]{2,6}$/.test(word)) return true;
   if (/^[A-Z][a-z]+[A-Z]/.test(word)) return true;
-  if (/^[A-Z][a-z]{2,}$/.test(word)) {
-    const prev = text.slice(0, index).trimEnd();
-    if (prev.length > 0 && !/[.!?]$/.test(prev)) return true;
-  }
   const before = text.slice(Math.max(0, index - 8), index);
   if (/https?:\/\/$/i.test(before) || /@$/.test(before)) return true;
   if (caret == null) return false;

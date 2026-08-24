@@ -83,7 +83,35 @@ function mirrorRect(el, start, end) {
   const cs = getComputedStyle(el);
   const text = getText(el);
   const mirror = document.createElement("div");
-  mirror.style.cssText = `position:absolute;visibility:hidden;white-space:pre-wrap;word-wrap:break-word;overflow:hidden;width:${el.clientWidth}px;font:${cs.font};padding:${cs.padding};line-height:${cs.lineHeight};border:${cs.border};box-sizing:${cs.boxSizing}`;
+  const props = [
+    "boxSizing",
+    "fontFamily",
+    "fontSize",
+    "fontWeight",
+    "fontStyle",
+    "letterSpacing",
+    "lineHeight",
+    "paddingTop",
+    "paddingRight",
+    "paddingBottom",
+    "paddingLeft",
+    "borderTopWidth",
+    "borderRightWidth",
+    "borderBottomWidth",
+    "borderLeftWidth",
+    "textAlign",
+    "whiteSpace",
+    "wordWrap",
+    "wordBreak",
+    "overflowWrap",
+    "tabSize",
+  ];
+  mirror.style.cssText =
+    "position:absolute;visibility:hidden;white-space:pre-wrap;word-wrap:break-word;overflow:hidden;left:0;top:0;";
+  mirror.style.width = `${el.clientWidth}px`;
+  for (const p of props) {
+    mirror.style[p] = cs[p];
+  }
   const span = document.createElement("span");
   span.textContent = text.slice(start, end) || " ";
   mirror.append(text.slice(0, start), span);
@@ -101,10 +129,18 @@ function mirrorRect(el, start, end) {
   };
 }
 
+function isEditable(el) {
+  return typeof el.value === "string" || el.isContentEditable;
+}
+
+function rangeRect(el, start, end) {
+  return mirrorRect(el, start, end);
+}
+
 function showCard(root, el, match) {
   root.querySelector(".card")?.remove();
   const original = getText(el).slice(match.offset, match.offset + match.length);
-  const r = typeof el.value === "string" ? mirrorRect(el, match.offset, match.offset + match.length) : el.getBoundingClientRect();
+  const r = rangeRect(el, match.offset, match.offset + match.length);
   const card = document.createElement("div");
   card.className = "card";
   card.style.left = Math.min(Math.max(8, r.left || r.x || 8), window.innerWidth - 312) + "px";
@@ -141,10 +177,7 @@ function showChips(root, el, suggestions) {
   root.querySelector(".chips")?.remove();
   if (!suggestions?.length) return;
   const caret = caretOf(el);
-  const r =
-    typeof el.value === "string"
-      ? mirrorRect(el, Math.max(0, caret - 1), caret)
-      : el.getBoundingClientRect();
+  const r = rangeRect(el, Math.max(0, caret - 1), caret);
   const bar = document.createElement("div");
   bar.className = "chips";
   bar.style.left = Math.min(Math.max(8, r.left || 8), window.innerWidth - 360) + "px";
@@ -177,9 +210,9 @@ function paint(el, matches, help) {
   style.textContent = cardStyles();
   root.appendChild(style);
   if (!el) return;
-  if (typeof el.value === "string") {
+  if (isEditable(el)) {
     for (const m of matches || []) {
-      const r = mirrorRect(el, m.offset, m.offset + m.length);
+      const r = rangeRect(el, m.offset, m.offset + m.length);
       const mark = document.createElement("div");
       mark.className = "u " + (m.category || "");
       mark.style.left = r.left + "px";

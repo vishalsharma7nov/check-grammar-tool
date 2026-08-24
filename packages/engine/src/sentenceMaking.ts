@@ -278,6 +278,78 @@ const BE: Record<string, string> = {
 const MODAL_BEFORE =
   /(?:\b(?:will|would|could|can|shall|should|may|might|must|do|does|did|don't|doesn't|didn't|to|not|please)\s+)$/i;
 
+const LEGIT_PASSIVE_PARTICIPLES = new Set([
+  "submitted", "born", "founded", "established", "created", "built", "made", "written",
+  "published", "released", "announced", "completed", "approved", "rejected", "sent",
+  "received", "given", "taken", "held", "elected", "appointed", "named", "designed",
+  "developed", "discovered", "invented", "formed", "acquired", "sold", "paid", "charged",
+  "deployed", "installed", "implemented", "executed", "performed", "conducted", "awarded",
+  "granted", "issued", "filed", "recorded", "registered", "accepted", "denied", "cancelled",
+  "canceled", "postponed", "delayed", "extended", "expired", "terminated", "closed",
+  "opened", "launched", "introduced", "presented", "shown", "hosted", "organized",
+  "organised", "planned", "scheduled", "prepared", "processed", "handled", "managed",
+  "maintained", "repaired", "restored", "destroyed", "damaged", "injured", "killed",
+  "arrested", "convicted", "acquitted", "released", "saved", "protected", "secured",
+  "verified", "validated", "confirmed", "certified", "licensed", "licenced", "authorized",
+  "authorised", "endorsed", "recommended", "proposed", "offered", "requested", "ordered",
+  "required", "mandated", "enforced", "applied", "allocated", "assigned", "delivered",
+  "shipped", "transported", "moved", "relocated", "transferred", "converted", "changed",
+  "modified", "updated", "revised", "edited", "corrected", "fixed", "resolved", "addressed",
+  "treated", "recovered", "improved", "enhanced", "upgraded", "expanded", "reduced",
+  "increased", "decreased", "raised", "lowered", "stopped", "started", "begun", "initiated",
+  "triggered", "caused", "prevented", "avoided", "eliminated", "removed", "deleted",
+  "cleared", "cleaned", "used", "worn", "broken", "lost", "found", "hidden", "revealed",
+  "exposed", "uncovered", "detected", "identified", "recognized", "recognised", "classified",
+  "reviewed", "evaluated", "assessed", "measured", "counted", "calculated", "estimated",
+  "predicted", "expected", "anticipated", "intended", "aimed", "targeted", "focused",
+  "focussed", "centered", "centred", "based", "grounded", "rooted", "fixed", "placed",
+  "located", "situated", "headquartered", "incorporated", "listed", "quoted", "traded",
+  "valued", "priced", "billed", "invoiced", "refunded", "compensated", "rewarded",
+  "punished", "fined", "taxed", "funded", "financed", "invested", "donated", "contributed",
+  "supported", "backed", "sponsored", "advertised", "promoted", "marketed", "pitched",
+]);
+
+export function isLegitPassive(match: string): boolean {
+  const parts = match.toLowerCase().split(/\s+/);
+  const participle = parts[parts.length - 1]?.replace(/[^a-z]/g, "") ?? "";
+  return LEGIT_PASSIVE_PARTICIPLES.has(participle);
+}
+
+/** Missing-apostrophe contractions often typed in chat/email. */
+const MISSING_APOSTROPHE: Record<string, string> = {
+  dont: "don't",
+  doesnt: "doesn't",
+  didnt: "didn't",
+  cant: "can't",
+  wont: "won't",
+  isnt: "isn't",
+  arent: "aren't",
+  wasnt: "wasn't",
+  werent: "weren't",
+  havent: "haven't",
+  hasnt: "hasn't",
+  hadnt: "hadn't",
+  wouldnt: "wouldn't",
+  couldnt: "couldn't",
+  shouldnt: "shouldn't",
+  mustnt: "mustn't",
+  thats: "that's",
+  whats: "what's",
+  whos: "who's",
+  theres: "there's",
+  heres: "here's",
+  lets: "let's",
+  im: "I'm",
+  youre: "you're",
+  theyre: "they're",
+  weve: "we've",
+  theyve: "they've",
+  youve: "you've",
+  ive: "I've",
+  hes: "he's",
+  shes: "she's",
+};
+
 type Skip = (index: number) => boolean;
 
 function thirdPerson(base: string): string {
@@ -709,16 +781,16 @@ export function checkSentenceMaking(text: string, skip: Skip): Match[] {
     );
   });
 
-  each(text, /(^|[.!?]\s+)(me and )([A-Z][a-z]+)/g, skip, (m) => {
+  each(text, /(^|[.!?]\s+)(me and )([A-Za-z][a-z]*)/gi, skip, (m) => {
     const name = m[3];
     add(
       matches,
       m.index + m[1].length,
       m[2].length + name.length,
       "GRAMMAR_ME_AND_SUBJECT",
-      `Subject position: “${name} and I”, not “Me and ${name}”.`,
+      `Subject position: “${keepCase(name, name[0].toUpperCase() + name.slice(1).toLowerCase())} and I”, not “Me and ${name}”.`,
       "Use I for the subject of a clause; me for the object.",
-      [`${name} and I`],
+      [`${keepCase(name, name[0].toUpperCase() + name.slice(1).toLowerCase())} and I`],
     );
   });
 
@@ -756,17 +828,39 @@ export function checkSentenceMaking(text: string, skip: Skip): Match[] {
     );
   });
 
-  each(text, /\bits\s+(a|an|the|not|ok|okay|fine|good|going|raining|time)\b/gi, skip, (m) => {
-    add(
-      matches,
-      m.index,
-      3,
-      "GRAMMAR_ITS_IT_IS",
-      "This “its” is probably the contraction “it's” (it is).",
-      "Its is possessive (its color). It's means it is / it has.",
-      [`it's ${m[1]}`],
-    );
-  });
+  each(
+    text,
+    /\bits\s+(?:not|ok(?:ay)?|fine|good|bad|great|better|worse|true|false|possible|likely|clear|important|necessary|required|available|working|broken|fixed|open|closed|here|there|now|then|always|never|still|already|just|also|only|even|really|very|so|too|quite|pretty|fairly|rather|probably|possibly|maybe|perhaps|certainly|definitely|surely|clearly|obviously|going|raining|snowing|time|late|early|hard|easy|difficult|simple|weird|strange|normal|happy|sad|tired|done|finished|ready|complete|incomplete|safe|unsafe|legal|illegal|fair|unfair|fun|boring|interesting|sad|dead|alive|born|mine|yours|his|hers|theirs|ours|been|being|had|having|got|getting|becoming|seeming|appearing|sounding|feeling|looking|seem|appears|sounds|feels|looks)\b/gi,
+    skip,
+    (m) => {
+      add(
+        matches,
+        m.index,
+        3,
+        "GRAMMAR_ITS_IT_IS",
+        "This “its” is probably the contraction “it's” (it is).",
+        "Its is possessive (its color). It's means it is / it has.",
+        ["it's"],
+      );
+    },
+  );
+
+  each(
+    text,
+    /\bits\s+(?:a|an)\s+(?:good|bad|great|big|small|long|short|new|old|hot|cold|fast|slow|high|low|right|wrong|true|false|real|valid|safe|common|rare|free|busy|empty|full|hard|easy|difficult|simple|complex|weird|strange|normal|happy|sad|tired|ready|done|finished|complete|possible|impossible|likely|unlikely|clear|important|necessary|required|optional|available|working|broken|fixed|open|closed|locked|unlocked|great|nice|fine|ok(?:ay)?|problem|issue|mistake|error|bug|feature|shame|pity|surprise|relief|pleasure|honor|honour|blessing|curse|disaster|catastrophe|miracle|wonder|shame)\b/gi,
+    skip,
+    (m) => {
+      add(
+        matches,
+        m.index,
+        3,
+        "GRAMMAR_ITS_IT_IS",
+        "This “its” is probably the contraction “it's” (it is).",
+        "Its is possessive (its color). It's means it is / it has.",
+        ["it's"],
+      );
+    },
+  );
 
   each(text, /\bbecause\b[^.]{0,80}\bso\b/gi, skip, (m) => {
     add(
@@ -778,6 +872,79 @@ export function checkSentenceMaking(text: string, skip: Skip): Match[] {
       "Because already marks cause; so marks result. Pick one.",
       [],
     );
+  });
+
+  for (const [raw, fixed] of Object.entries(MISSING_APOSTROPHE)) {
+    const re = new RegExp(`\\b${raw}\\b`, "gi");
+    each(text, re, skip, (m) => {
+      add(
+        matches,
+        m.index,
+        m[0].length,
+        "GRAMMAR_MISSING_APOSTROPHE",
+        `Missing apostrophe: “${m[0]}” → “${fixed}”.`,
+        "Contractions need an apostrophe in standard English.",
+        [keepCase(m[0], fixed)],
+      );
+    });
+  }
+
+  each(text, /\btheir\s+(?:is|are|was|were|will|would|should|could|might|may|can|has|have|had|been|being|going|not|here)\b/gi, skip, (m) => {
+    add(matches, m.index, 5, "GRAMMAR_HOMOPHONE_THEIR", "“Their” is possessive; you probably mean “there” or “they're”.", "Their = belonging to them. There = place. They're = they are.", ["there", "they're"]);
+  });
+
+  each(text, /\bthere\s+(?:own|first|last|name|job|team|work|home|car|phone|email|idea|plan|goal|role|task|issue|problem|solution|answer|question|reason|way|path|choice|option|decision|view|perspective|approach|method|style|design|color|colour|size|shape|type|kind|sort|form|part|piece|bit|side|end|edge|corner|center|centre|top|bottom|left|right|front|back|history|story|culture|language|voice|tone|style|brand|product|service|company|business|office|department|manager|leader|staff|member|user|customer|client|partner|friend|family|parent|child|brother|sister|husband|wife|son|daughter|boss|colleague|neighbor|neighbour)\b/gi, skip, (m) => {
+    add(matches, m.index, 5, "GRAMMAR_HOMOPHONE_THERE", "“There” is a place; you probably mean “their” (possessive).", "Their = belonging to them. There = in that place.", ["their"]);
+  });
+
+  each(text, /\byour\s+(?:going|not|here|there|done|finished|ready|welcome|right|wrong|welcome|invited|welcome|welcome)\b/gi, skip, (m) => {
+    add(matches, m.index, 4, "GRAMMAR_HOMOPHONE_YOUR", "“Your” is possessive; you probably mean “you're” (you are).", "Your = belonging to you. You're = you are.", ["you're"]);
+  });
+
+  each(text, /\byou're\s+(?:name|job|team|work|home|car|phone|email|idea|plan|goal|role|task|issue|problem|way|choice|decision|view|approach|method|style|company|office|boss|friend|family|parent|child|boss|colleague)\b/gi, skip, (m) => {
+    add(matches, m.index, 5, "GRAMMAR_HOMOPHONE_YOURE", "“You're” means you are; you probably mean “your” (possessive).", "Your = belonging to you. You're = you are.", ["your"]);
+  });
+
+  each(text, /\b(?:want|need|try|plan|go|come|talk|work|buy|pay|move|change|improve|fix|apply|register|download|upload|install|update|delete|remove|add|create|build|develop|design|test|deploy|launch|release|publish|share|post|reply|respond)\s+to\s+(?:much|many|late|early|soon|often|hard|easy|fast|slow|good|bad|great|nice|fine|ok|okay|well|better|worse|best|worst|more|less|enough|so|very|really|quite|pretty|fairly|rather)\b/gi, skip, (m) => {
+    const tooStart = m.index + m[0].lastIndexOf(" to ");
+    add(matches, tooStart + 1, 2, "GRAMMAR_HOMOPHONE_TO_TOO", "“Too” (also/excessively) fits here, not “to”.", "To = direction/infinitive. Too = also or excessively. Two = the number.", ["too"]);
+  });
+
+  each(text, /\btoo\s+(?:go|do|have|want|need|try|plan|hope|decide|choose|learn|come|talk|speak|write|read|send|give|take|make|see|know|think|believe|feel|look|listen|watch|wait|start|stop|begin|finish|continue|help|ask|tell|show|explain|work|play|study|buy|sell|pay|move|change|improve|fix|solve|handle|manage|join|leave|stay|return|visit|travel|create|build|develop|design|test|deploy|launch|release|publish|share|post|reply|respond|apply|register|sign|download|upload|install|update|delete|remove|add)\b/gi, skip, (m) => {
+    add(matches, m.index, 3, "GRAMMAR_HOMOPHONE_TOO_TO", "“To” (infinitive) fits here, not “too”.", "To = direction/infinitive. Too = also or excessively.", ["to"]);
+  });
+
+  each(text, /\btwo\s+(?:much|many|late|early|soon|often|rarely|hard|easy|fast|slow|good|bad|great|nice|fine|ok|okay|well|better|worse|best|worst|more|less|enough|so|very|really|quite|pretty|fairly|rather|somewhat|extremely|absolutely|completely|totally|entirely|partly|mostly|mainly|largely|slightly|barely|hardly|nearly|almost|about|around|approximately|roughly|exactly|precisely|literally|figuratively|probably|possibly|maybe|perhaps|likely|unlikely|certainly|definitely|surely|clearly|obviously)\b/gi, skip, (m) => {
+    add(matches, m.index, 3, "GRAMMAR_HOMOPHONE_TWO_TOO", "“Too” (also/excessively) fits here, not “two”.", "Two = the number. Too = also or excessively.", ["too"]);
+  });
+
+  each(text, /\b(?:bigger|smaller|larger|better|worse|best|worst|more|less|faster|slower|higher|lower|longer|shorter|stronger|weaker|harder|easier|earlier|later|sooner|closer|farther|further|heavier|lighter|younger|older|newer|nicer|finer|richer|poorer|happier|sadder|angrier|calmer|busier|quieter|louder|brighter|darker|warmer|cooler|hotter|colder|cheaper|tougher|softer|thicker|thinner|wider|narrower|deeper|shallower|taller|shorter)\s+then\b/gi, skip, (m) => {
+    const thenStart = m.index + m[0].lastIndexOf(" then");
+    add(matches, thenStart + 1, 4, "GRAMMAR_HOMOPHONE_THEN_THAN", "Comparisons use “than”, not “then”.", "Then = time/sequence. Than = comparison.", ["than"]);
+  });
+
+  each(text, /\bthan\s+(?:I|we|you|they|he|she|it|the|a|an|this|that|these|those|my|your|our|their|his|her|its|some|any|every|each|all|both|either|neither|what|which|who|whom|where|when|why|how)\s+(?:will|would|should|could|can|may|might|must|shall|do|does|did|have|has|had|am|is|are|was|were|be|been|being|go|goes|went|come|comes|came|make|makes|made|take|takes|took|get|gets|got|see|sees|saw|know|knows|think|thinks|say|says|give|gives|use|uses|want|wants|work|works|try|tries|call|calls|ask|asks|feel|feels|leave|left|keep|keeps|help|helps|talk|talks|turn|turns|start|starts|show|shows|hear|hears|play|plays|run|runs|move|moves|live|lives|believe|bring|happen|write|wrote|sit|stand|pay|meet|include|continue|set|learn|change|lead|understand|watch|follow|stop|create|speak|read|spend|grow|open|walk|win|offer|remember|love|consider|appear|buy|wait|serve|send|build|stay|fall|cut|reach|raise|pass|sell|decide|return|look|find|tell|become|mean|suggest|require|allow|add|expect|report|agree|accept|explain|remain|apply|choose|enjoy|prefer|fail|arrive|like|likes|liked)\b/gi, skip, (m) => {
+    add(matches, m.index, 4, "GRAMMAR_HOMOPHONE_THAN_THEN", "Sequence/time uses “then”, not “than”.", "Then = time/sequence. Than = comparison.", ["then"]);
+  });
+
+  each(text, /\b(?:the|a|an|this|that|these|those|my|your|our|their|his|her|its|some|any|every|each|all|both|either|neither|what|which|no|another|other|same|similar|different|opposite|main|primary|secondary|key|core|major|minor|side|direct|indirect|overall|net|gross|positive|negative|long|short|term|immediate|delayed|instant|lasting|permanent|temporary|possible|likely|potential|actual|real|virtual|side|adverse|beneficial|harmful|helpful|useful|useless|significant|insignificant|substantial|minimal|maximum|minimum|optimal|suboptimal|desired|undesired|intended|unintended|expected|unexpected|predicted|unpredicted|observed|unobserved|measured|unmeasured|reported|unreported|documented|undocumented|known|unknown|visible|invisible|noticeable|unnoticeable|dramatic|subtle|big|small|large|tiny|huge|massive|minor|major)\s+effect\b/gi, skip, (m) => {
+    const eff = m[0].match(/\beffect\b/i);
+    if (!eff || eff.index === undefined) return;
+    add(matches, m.index + eff.index, 6, "GRAMMAR_HOMOPHONE_AFFECT_EFFECT", "As a verb meaning influence, use “affect”.", "Affect (verb) = influence. Effect (noun) = result.", ["affect"]);
+  });
+
+  each(text, /\b(?:will|would|should|could|can|may|might|must|shall|to|try|trying|tries|tried|begin|began|start|started|continue|continued|help|helped|helps|need|needed|needs|want|wanted|wants|like|liked|likes|love|loved|loves|hope|hoped|hopes|expect|expected|expects|intend|intended|intends|plan|planned|plans|aim|aimed|aims|seek|sought|seeks|fail|failed|fails|manage|managed|manages|attempt|attempted|attempts|strive|strove|strives|struggle|struggled|struggles|work|worked|works|keep|kept|keeps|stop|stopped|stops|avoid|avoided|avoids|prevent|prevented|prevents|reduce|reduced|reduces|increase|increased|increases|improve|improved|improves|worsen|worsened|worsens|change|changed|changes|alter|altered|alters|modify|modified|modifies|impact|impacted|impacts|influence|influenced|influences|shape|shaped|shapes|determine|determined|determines|decide|decided|decides|control|controlled|controls|limit|limited|limits|restrict|restricted|restricts|enhance|enhanced|enhances|boost|boosted|boosts|hurt|hurts|harm|harmed|harms|damage|damaged|damages|weaken|weakened|weakens|strengthen|strengthened|strengthens|undermine|undermined|undermines|support|supported|supports|undercut|undercut|undercuts|undermine|undermined|undermines)\s+the\s+effect\b/gi, skip, (m) => {
+    const eff = m[0].match(/\beffect\b/i);
+    if (!eff || eff.index === undefined) return;
+    add(matches, m.index + eff.index, 6, "GRAMMAR_HOMOPHONE_AFFECT_EFFECT", "As a verb meaning influence, use “affect”.", "Affect (verb) = influence. Effect (noun) = result.", ["affect"]);
+  });
+
+  each(text, /\bless\s+(?:people|items|things|errors|mistakes|bugs|issues|problems|questions|options|choices|cases|examples|students|employees|members|users|customers|clients|partners|friends|visitors|guests|teams|groups|companies|products|features|parts|pages|files|reports|documents|years|months|weeks|days|hours|minutes|seconds|times|attempts|tries|steps|tasks|jobs|roles|names|words|lines|rows|columns|units|points|places|rooms|seats|tickets|orders|requests|calls|emails|messages|comments|posts|votes|reviews|ratings|scores|grades|marks|labels|tags|links|nodes|edges|keys|tokens|ids|codes|numbers|accounts|profiles|records|entries|events|sessions|visits|clicks|views|downloads|uploads|installs|updates|upgrades|patches|fixes|releases|versions|builds|deploys|tests|checks|runs|loops|iterations|cycles|rounds|turns|games|matches|wins|losses|draws|goals|points|shots|hits|misses|errors|warnings|alerts|notifications|reminders|notes|ideas|plans|goals|targets|milestones|deadlines|delays|extensions|retries|failures|successes|passes|fails|skips|drops|adds|removes|changes|edits|saves|loads|imports|exports|copies|moves|renames|deletes|creates|updates|merges|splits|joins|groups|sorts|filters|searches|results|matches|hits|misses)\b/gi, skip, (m) => {
+    add(matches, m.index, 4, "GRAMMAR_LESS_FEWER", "Use “fewer” with countable nouns.", "Fewer = countable. Less = uncountable or abstract amount.", ["fewer"]);
+  });
+
+  each(text, /\b(?:to|for|with|from|by|of|about|between|among|through|over|under|into|onto|upon|toward|towards|until|since|during|before|after|near|past|except|like|unlike|versus|vs|via|per|against|despite|concerning|regarding|including|excluding)\s+who\b/gi, skip, (m) => {
+    add(matches, m.index + m[0].length - 3, 3, "GRAMMAR_WHO_WHOM", "After a preposition, use “whom”.", "Who = subject. Whom = object (especially after prepositions).", ["whom"]);
   });
 
   for (const s of splitSentences(text)) {

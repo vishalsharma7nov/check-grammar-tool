@@ -60,6 +60,47 @@ describe("privacy engine", () => {
     const r = analyze({ text: "Why you are late?" });
     assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_QUESTION_ORDER"));
   });
+
+  it("flags missing apostrophe contractions", () => {
+    const r = analyze({ text: "I dont think its ready." });
+    assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_MISSING_APOSTROPHE" && m.replacements.includes("don't")));
+    assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_ITS_IT_IS"));
+  });
+
+  it("flags homophone your/you're confusion", () => {
+    const r = analyze({ text: "Your going to love this." });
+    assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_HOMOPHONE_YOUR"));
+  });
+
+  it("flags then/than comparison mix-up", () => {
+    const r = analyze({ text: "She is taller then me." });
+    assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_HOMOPHONE_THEN_THAN"));
+  });
+
+  it("flags less/fewer with countable nouns", () => {
+    const r = analyze({ text: "We need less errors in production." });
+    assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_LESS_FEWER"));
+  });
+
+  it("allows legitimate passives", () => {
+    const r = analyze({ text: "The form was submitted. He was born in 1990. The company was founded in 2005." });
+    assert.equal(r.matches.filter((m) => m.ruleId === "STYLE_PASSIVE").length, 0);
+  });
+
+  it("does not flag possessive its before nouns", () => {
+    const r = analyze({ text: "The dog wagged its tail." });
+    assert.equal(r.matches.filter((m) => m.ruleId === "GRAMMAR_ITS_IT_IS").length, 0);
+  });
+
+  it("flags its when it is likely it is", () => {
+    const r = analyze({ text: "Its going to rain." });
+    assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_ITS_IT_IS"));
+  });
+
+  it("flags me and lowercase name in subject position", () => {
+    const r = analyze({ text: "Me and john went home." });
+    assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_ME_AND_SUBJECT"));
+  });
 });
 
 describe("writing help", () => {
@@ -140,5 +181,18 @@ describe("free dictionary spelling", () => {
   it("does not flag contractions", () => {
     const r = analyze({ text: "I don't think it's done." });
     assert.equal(r.matches.filter((m) => m.category === "spelling").length, 0);
+  });
+
+  it("flags capitalized misspellings mid-sentence", () => {
+    const r = analyze({ text: "Hello Mispelled word." });
+    const m = r.matches.find((x) => x.category === "spelling" && x.message.includes("Mispelled"));
+    assert.ok(m);
+    assert.ok(m.replacements.some((x) => x.toLowerCase() === "misspelled"));
+  });
+
+  it("suggests two-edit-distance corrections when one-edit finds nothing", () => {
+    const r = analyze({ text: "speling" });
+    const m = r.matches.find((x) => x.category === "spelling");
+    assert.ok(m?.replacements.some((x) => x === "spelling"));
   });
 });
