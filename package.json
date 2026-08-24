@@ -14,6 +14,7 @@
     "dev:web": "npm run dev -w @check-grammar/web",
     "dev:api": "cd server/api && go run ./cmd/api",
     "dev:shim": "node --experimental-strip-types server/shim/check-server.mjs",
+    "llm:serve": "python3 ml/serve/server.py --port 8081",
     "test:engine": "node --experimental-strip-types --test packages/engine/src/engine.test.ts",
     "eval": "node --experimental-strip-types --test packages/engine/src/engine.test.ts && node --experimental-strip-types eval/run.mjs",
     "build": "npm run build -w @check-grammar/web",

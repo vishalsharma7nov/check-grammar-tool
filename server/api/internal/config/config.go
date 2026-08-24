@@ -19,6 +19,8 @@ type Config struct {
 	LLMBaseURL        string
 	LLMModel          string
 	LLMAPIKey         string
+	OllamaBaseURL     string
+	OllamaModel       string
 	CloudLLMBaseURL   string
 	CloudLLMAPIKey    string
 	CloudLLMModel     string
@@ -53,6 +55,8 @@ func FromEnv() Config {
 		LLMBaseURL:         getenv("LLM_BASE_URL", "http://127.0.0.1:8081/v1"),
 		LLMModel:           getenv("LLM_MODEL", "check-gec-v0"),
 		LLMAPIKey:          os.Getenv("LLM_API_KEY"),
+		OllamaBaseURL:      getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434"),
+		OllamaModel:        os.Getenv("OLLAMA_MODEL"),
 		CloudLLMBaseURL:    os.Getenv("CLOUD_LLM_BASE_URL"),
 		CloudLLMAPIKey:     os.Getenv("CLOUD_LLM_API_KEY"),
 		CloudLLMModel:      os.Getenv("CLOUD_LLM_MODEL"),

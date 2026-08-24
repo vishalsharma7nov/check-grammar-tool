@@ -12,6 +12,22 @@ function engine() {
 let personalDictionary = [];
 let activeEl = null;
 let activeMatch = null;
+let enhancedMode = false;
+
+function loadSettings() {
+  if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) return;
+  chrome.runtime.sendMessage({ type: "getSettings" }, (res) => {
+    if (res) enhancedMode = Boolean(res.enhancedMode);
+  });
+}
+
+loadSettings();
+if (typeof chrome !== "undefined" && chrome.storage?.onChanged) {
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== "sync" || !changes.checkGrammarSettings) return;
+    enhancedMode = Boolean(changes.checkGrammarSettings.newValue?.enhancedMode);
+  });
+}
 
 function loadPersonalDictionary() {
   if (typeof chrome !== "undefined" && chrome.storage?.local) {
@@ -61,7 +77,7 @@ function ensureHost() {
 
 function cardStyles() {
   return `
-    .u{position:absolute;border-bottom:2px wavy #b42318;pointer-events:auto;cursor:pointer;height:1.1em}
+    .u{position:absolute;pointer-events:auto;cursor:pointer;height:0;box-sizing:content-box;border-bottom:2px wavy #b42318;background:transparent}
     .u.grammar,.u.punctuation{border-bottom-color:#b54708}
     .u.clarity,.u.style,.u.tone{border-bottom-color:#175cd3}
     .u.dialect{border-bottom-color:#0f6b5c}
@@ -298,7 +314,7 @@ function paint(el, matches, help) {
       const mark = document.createElement("div");
       mark.className = "u " + (m.category || "");
       mark.style.left = r.left + "px";
-      mark.style.top = r.top + r.height - 4 + "px";
+      mark.style.top = r.bottom - 2 + "px";
       mark.style.width = Math.max(8, r.width) + "px";
       mark.addEventListener("click", (ev) => {
         ev.preventDefault();
@@ -322,6 +338,13 @@ function paint(el, matches, help) {
 }
 
 function check(text, caret) {
+  if (enhancedMode) {
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage({ type: "check", text, caret, enhanced: true }, (res) =>
+        resolve(res || { matches: [] }),
+      );
+    });
+  }
   const cg = engine();
   if (cg?.analyze) {
     return Promise.resolve(cg.analyze({ text, dialect: "en-IN", caret, personalDictionary }));

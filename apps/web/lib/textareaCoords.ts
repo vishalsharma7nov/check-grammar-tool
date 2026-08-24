@@ -25,6 +25,7 @@ export function textareaRangeRect(
     "borderBottomWidth",
     "borderLeftWidth",
     "textAlign",
+    "textIndent",
     "whiteSpace",
     "wordWrap",
     "wordBreak",

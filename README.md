@@ -89,6 +89,35 @@ docker compose up --build
 
 Then start a local model server on the host (see [ml/README.md](ml/README.md)):
 
+### Ollama (recommended for Enhanced mode + rewrites)
+
+```bash
+# Install Ollama from https://ollama.com then:
+ollama pull llama3.2
+# or: ollama pull mistral
+
+# Bridge (auto-detects Ollama, falls back to rule stub without it):
+npm run llm:serve
+# or: python ml/serve/server.py --port 8081
+
+# API + web (separate terminals):
+npm run dev:api
+npm run dev:web
+```
+
+Set in `.env`:
+
+```bash
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_MODEL=llama3.2
+LLM_BASE_URL=http://127.0.0.1:8081/v1
+LLM_MODEL=llama3.2
+```
+
+Open the editor → **Enhanced** mode. `/healthz` reports `llmAvailable` and `llmBackend: ollama` when ready. Grammar check sends structured JSON corrections; **Rewrite** returns clarity / brevity / formality variants.
+
+**Without Ollama**, the same bridge runs a deterministic rule stub (typo + wordiness fixes) for offline dev.
+
 ```bash
 python ml/serve/server.py --port 8081
 ```

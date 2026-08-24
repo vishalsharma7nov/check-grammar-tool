@@ -1,4 +1,4 @@
-import type { Dialect } from "@check-grammar/protocol";
+import type { Dialect, RewriteVariant } from "@check-grammar/protocol";
 
 export type RewriteGoal = "clarity" | "brevity" | "formality";
 
@@ -63,30 +63,55 @@ export function rewriteInstruction(goals: RewriteGoal[]): string {
   return parts.join(" ");
 }
 
+export function localRewriteVariants(text: string, goals: RewriteGoal[]): RewriteVariant[] {
+  const unique = [...new Set(goals.length ? goals : (["clarity"] as RewriteGoal[]))];
+  return unique.map((goal) => ({ goal, text: localRewrite(text, [goal]) }));
+}
+
+export type RewriteResult = {
+  text: string;
+  provider: string;
+  model?: string;
+  variants: RewriteVariant[];
+};
+
 export async function fetchRewrite(
   api: string,
   snippet: string,
   goals: RewriteGoal[],
   dialect: Dialect,
-): Promise<{ text: string; provider: string }> {
+): Promise<RewriteResult> {
+  const goalsActive = goals.length ? goals : (["clarity"] as RewriteGoal[]);
   try {
     const r = await fetch(`${api}/v1/rewrite`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         text: snippet,
-        instruction: rewriteInstruction(goals),
+        instruction: rewriteInstruction(goalsActive),
         dialect,
       }),
     });
     if (r.ok) {
       const body = await r.json();
-      if (body.text?.trim()) return { text: body.text.trim(), provider: body.provider || "local" };
+      const variants: RewriteVariant[] = Array.isArray(body.variants)
+        ? body.variants.filter((v: RewriteVariant) => v?.text?.trim())
+        : [];
+      const text = body.text?.trim() || variants[0]?.text?.trim() || "";
+      if (text) {
+        return {
+          text,
+          provider: body.provider || "local",
+          model: body.model,
+          variants: variants.length ? variants : localRewriteVariants(snippet, goalsActive),
+        };
+      }
     }
   } catch {
     /* fall through to local rules */
   }
-  return { text: localRewrite(snippet, goals), provider: "rules" };
+  const variants = localRewriteVariants(snippet, goalsActive);
+  return { text: variants[0]?.text ?? snippet, provider: "rules", variants };
 }
 
 /** Simple word-level diff segments for side-by-side display. */

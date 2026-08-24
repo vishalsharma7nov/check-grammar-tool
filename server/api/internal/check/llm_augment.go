@@ -9,17 +9,23 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/checkgrammar/check-grammar/server/api/internal/llm"
 )
 
-func llmBaseURL() string {
+func llmBaseURL(ctx context.Context) string {
 	if u := getenv("LLM_URL", ""); u != "" {
 		return strings.TrimRight(u, "/")
 	}
-	return strings.TrimRight(getenv("LLM_BASE_URL", ""), "/")
+	return llm.ResolveBaseURL(ctx, getenv("LLM_BASE_URL", ""))
 }
 
 func llmModel() string {
-	return getenv("LLM_MODEL", "check-gec-v0")
+	if m := getenv("LLM_MODEL", ""); m != "" {
+		return m
+	}
+	status := llm.DetectOllama(context.Background())
+	return llm.EffectiveModel("", status)
 }
 
 func llmAPIKey() string {
@@ -27,22 +33,77 @@ func llmAPIKey() string {
 }
 
 func augmentWithLLM(ctx context.Context, text string, dialect Dialect, matches []Match) ([]Match, LLMMeta, error) {
-	base := llmBaseURL()
+	base := llmBaseURL(ctx)
 	if base == "" {
-		return matches, LLMMeta{Used: false, Provider: "none", SkippedReason: "LLM_BASE_URL not set"}, nil
+		return matches, LLMMeta{Used: false, Provider: "none", SkippedReason: "no LLM endpoint"}, nil
 	}
 	instruction := "Fix grammar, spelling, and clarity. Preserve meaning. Dialect: " + string(dialect)
-	corrected, model, err := callLLM(ctx, base, instruction, text)
+	raw, model, err := callLLM(ctx, base, instruction, text)
 	if err != nil {
-		return matches, LLMMeta{Used: false, Provider: "local", SkippedReason: err.Error()}, err
+		provider := "local"
+		if strings.Contains(err.Error(), "ollama") {
+			provider = "ollama"
+		}
+		return matches, LLMMeta{Used: false, Provider: provider, SkippedReason: err.Error()}, err
 	}
+	corrected, changes, usedJSON := llm.ParseGrammarResponse(raw)
 	if corrected == "" || corrected == text {
-		return matches, LLMMeta{Used: true, Provider: "local", Model: model}, nil
+		backend := llmBackend(ctx)
+		return matches, LLMMeta{Used: true, Provider: backend, Model: model}, nil
 	}
-	extra := diffToMatches(text, corrected, dialect)
+	var extra []Match
+	if usedJSON && len(changes) > 0 {
+		extra = changesToMatches(text, changes, dialect)
+	} else {
+		extra = diffToMatches(text, corrected, dialect)
+	}
 	extra = filterNonOverlapping(matches, extra)
-	meta := LLMMeta{Used: true, Provider: "local", Model: model}
+	backend := llmBackend(ctx)
+	meta := LLMMeta{Used: true, Provider: backend, Model: model}
 	return mergeMatches(matches, extra), meta, nil
+}
+
+func llmBackend(ctx context.Context) string {
+	if llm.DetectOllama(ctx).Available {
+		return "ollama"
+	}
+	return "local"
+}
+
+func changesToMatches(text string, changes []llm.Correction, dialect Dialect) []Match {
+	var out []Match
+	searchFrom := 0
+	for _, ch := range changes {
+		if ch.From == "" || ch.To == "" {
+			continue
+		}
+		rel := strings.Index(text[searchFrom:], ch.From)
+		offset := -1
+		if rel >= 0 {
+			offset = searchFrom + rel
+		} else if idx := strings.Index(text, ch.From); idx >= 0 {
+			offset = idx
+		}
+		if offset < 0 {
+			continue
+		}
+		cat := ch.Category
+		if cat == "" {
+			cat = "grammar"
+		}
+		msg := ch.Message
+		if msg == "" {
+			msg = "LLM suggests a correction."
+		}
+		out = append(out, Match{
+			Offset: offset, Length: len(ch.From),
+			RuleID: "LLM_SUGGEST", Category: cat,
+			Message: msg, Explanation: "From local GEC model.",
+			Replacements: []string{ch.To}, Dialect: dialect,
+		})
+		searchFrom = offset + len(ch.From)
+	}
+	return out
 }
 
 func filterNonOverlapping(base, extra []Match) []Match {
@@ -75,7 +136,7 @@ func callLLM(ctx context.Context, base, instruction, text string) (string, strin
 	body := map[string]any{
 		"model": model,
 		"messages": []map[string]string{
-			{"role": "system", "content": "You are Check Grammar's local writing model. Return only the corrected text."},
+			{"role": "system", "content": llm.GrammarSystemPrompt()},
 			{"role": "user", "content": instruction + "\n\n---\n" + text},
 		},
 		"temperature": 0.2,
@@ -89,7 +150,7 @@ func callLLM(ctx context.Context, base, instruction, text string) (string, strin
 	if key := llmAPIKey(); key != "" {
 		req.Header.Set("Authorization", "Bearer "+key)
 	}
-	client := &http.Client{Timeout: 60 * time.Second}
+	client := &http.Client{Timeout: 90 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", model, fmt.Errorf("llm: %w", err)

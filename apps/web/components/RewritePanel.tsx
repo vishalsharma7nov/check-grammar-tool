@@ -1,5 +1,6 @@
 "use client";
 
+import type { RewriteVariant } from "@check-grammar/protocol";
 import type { DiffSegment } from "../lib/rewrite";
 
 function renderSegments(segs: DiffSegment[]) {
@@ -15,6 +16,9 @@ type Props = {
   suggested: string;
   beforeSegs: DiffSegment[];
   afterSegs: DiffSegment[];
+  variants?: RewriteVariant[];
+  selectedVariant?: number;
+  onSelectVariant?: (index: number) => void;
   provider: string;
   loading: boolean;
   error: string;
@@ -27,13 +31,20 @@ export default function RewritePanel({
   suggested,
   beforeSegs,
   afterSegs,
+  variants = [],
+  selectedVariant = 0,
+  onSelectVariant,
   provider,
   loading,
   error,
   onAccept,
   onClose,
 }: Props) {
+  const showVariants = variants.length > 1;
+
   return (
+    <>
+    <div className="rw-backdrop" aria-hidden onClick={onClose} />
     <div className="rw-panel" role="dialog" aria-label="Rewrite suggestion">
       <div className="rw-head">
         <h3>Rewrite</h3>
@@ -47,6 +58,22 @@ export default function RewritePanel({
         <p className="rw-status rw-err">{error}</p>
       ) : (
         <>
+          {showVariants ? (
+            <div className="rw-variant-tabs" role="tablist" aria-label="Rewrite variants">
+              {variants.map((v, i) => (
+                <button
+                  key={v.goal}
+                  type="button"
+                  role="tab"
+                  aria-selected={i === selectedVariant}
+                  className={i === selectedVariant ? "rw-tab active" : "rw-tab"}
+                  onClick={() => onSelectVariant?.(i)}
+                >
+                  {v.goal}
+                </button>
+              ))}
+            </div>
+          ) : null}
           <div className="rw-cols">
             <div className="rw-col">
               <span className="rw-label">Original</span>
@@ -69,5 +96,6 @@ export default function RewritePanel({
         </>
       )}
     </div>
+    </>
   );
 }

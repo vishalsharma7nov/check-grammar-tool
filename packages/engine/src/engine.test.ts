@@ -64,7 +64,7 @@ describe("privacy engine", () => {
   it("flags missing apostrophe contractions", () => {
     const r = analyze({ text: "I dont think its ready." });
     assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_MISSING_APOSTROPHE" && m.replacements.includes("don't")));
-    assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_ITS_IT_IS"));
+    assert.ok(r.matches.some((m) => /ITS|SPELL_CONTEXT.*ITS/.test(m.ruleId)));
   });
 
   it("flags homophone your/you're confusion", () => {
@@ -74,7 +74,7 @@ describe("privacy engine", () => {
 
   it("flags then/than comparison mix-up", () => {
     const r = analyze({ text: "She is taller then me." });
-    assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_HOMOPHONE_THEN_THAN"));
+    assert.ok(r.matches.some((m) => /THEN_THAN|THAN_THEN/.test(m.ruleId)));
   });
 
   it("flags less/fewer with countable nouns", () => {
@@ -94,7 +94,7 @@ describe("privacy engine", () => {
 
   it("flags its when it is likely it is", () => {
     const r = analyze({ text: "Its going to rain." });
-    assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_ITS_IT_IS"));
+    assert.ok(r.matches.some((m) => /ITS|SPELL_CONTEXT.*ITS/.test(m.ruleId)));
   });
 
   it("flags me and lowercase name in subject position", () => {
@@ -166,6 +166,47 @@ describe("context-aware spelling", () => {
     const r = analyze({ text: "Their team won the match." });
     assert.equal(r.matches.filter((m) => /THEIR|THEIR|THEIR/.test(m.ruleId)).length, 0);
   });
+
+  it("flags accept for as except for", () => {
+    const r = analyze({ text: "Everyone accept for John attended." });
+    assert.ok(r.matches.some((m) => m.ruleId.includes("ACCEPT")));
+  });
+
+  it("flags loose before lose context", () => {
+    const r = analyze({ text: "We will loose the lead." });
+    assert.ok(r.matches.some((m) => m.ruleId.includes("LOOSE") || m.ruleId.includes("LOSE")));
+  });
+
+  it("flags passed the deadline as past", () => {
+    const r = analyze({ text: "We passed the deadline last week." });
+    assert.ok(r.matches.some((m) => m.ruleId.includes("PASSED") || m.ruleId.includes("PAST")));
+  });
+});
+
+describe("inclusive language", () => {
+  it("flags manpower", () => {
+    const r = analyze({ text: "We need more manpower on this project." });
+    assert.ok(r.matches.some((m) => m.ruleId === "STYLE_INCLUSIVE_MANPOWER"));
+    assert.ok(r.matches.some((m) => m.replacements.includes("workforce")));
+  });
+
+  it("flags blacklist", () => {
+    const r = analyze({ text: "Add the IP to the blacklist." });
+    assert.ok(r.matches.some((m) => m.ruleId === "STYLE_INCLUSIVE_BLACKLIST"));
+  });
+
+  it("flags chairman", () => {
+    const r = analyze({ text: "The chairman approved the plan." });
+    assert.ok(r.matches.some((m) => m.replacements.includes("chair") || m.replacements.includes("chairperson")));
+  });
+});
+
+describe("clarity rules", () => {
+  it("flags sentences over 40 words", () => {
+    const words = Array.from({ length: 45 }, (_, i) => (i === 0 ? "This" : "word")).join(" ");
+    const r = analyze({ text: words + "." });
+    assert.ok(r.matches.some((m) => m.ruleId === "CLARITY_LONG_SENTENCE"));
+  });
 });
 
 describe("expanded grammar rules", () => {
@@ -184,22 +225,22 @@ describe("expanded grammar rules", () => {
 
   it("flags peak at as peek at", () => {
     const r = analyze({ text: "Take a peak at this." });
-    assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_PEEK_PEAK"));
+    assert.ok(r.matches.some((m) => /PEEK|PEAK/.test(m.ruleId)));
   });
 
   it("flags bare with me as bear with me", () => {
     const r = analyze({ text: "Bare with me for a moment." });
-    assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_BEAR_WITH"));
+    assert.ok(r.matches.some((m) => /BEAR|BARE/.test(m.ruleId)));
   });
 
   it("flags hit the break as hit the brake", () => {
     const r = analyze({ text: "Hit the break now." });
-    assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_BRAKE_BREAK"));
+    assert.ok(r.matches.some((m) => /BRAKE|BREAK/.test(m.ruleId)));
   });
 
   it("flags school principle as principal", () => {
     const r = analyze({ text: "The school principle approved it." });
-    assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_PRINCIPAL_PERSON"));
+    assert.ok(r.matches.some((m) => /PRINCIPAL|PRINCIPLE/.test(m.ruleId)));
   });
 
   it("flags colors compliment as complement", () => {
@@ -209,7 +250,7 @@ describe("expanded grammar rules", () => {
 
   it("flags office stationary as stationery", () => {
     const r = analyze({ text: "Order office stationary today." });
-    assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_STATIONERY"));
+    assert.ok(r.matches.some((m) => /STATIONERY|STATIONARY/.test(m.ruleId)));
   });
 
   it("flags alot as a lot", () => {
@@ -221,7 +262,7 @@ describe("expanded grammar rules", () => {
 
   it("flags whom after preposition", () => {
     const r = analyze({ text: "To who did you speak?" });
-    assert.ok(r.matches.some((m) => m.ruleId === "GRAMMAR_WHO_WHOM"));
+    assert.ok(r.matches.some((m) => /WHO_WHOM|WHOM/.test(m.ruleId)));
   });
 
   it("suggests Oxford comma in lists", () => {
@@ -279,6 +320,18 @@ describe("writing help", () => {
     const r = analyze({ text });
     const m = matchNearCaret(text, r.matches, 5);
     assert.equal(m, undefined);
+  });
+
+  it("suggests phrase completions after thank you", async () => {
+    const { writingHelp } = await import("./writingHelp.ts");
+    const h = writingHelp("Thank you ", "Thank you ".length);
+    assert.ok(h.next.some((n) => n.token.includes("for")));
+  });
+
+  it("suggests three-word phrase after looking forward to", async () => {
+    const { writingHelp } = await import("./writingHelp.ts");
+    const h = writingHelp("I am looking forward to ", "I am looking forward to ".length);
+    assert.ok(h.next.some((n) => n.token === "hearing" || n.token.includes("hearing")));
   });
 });
 

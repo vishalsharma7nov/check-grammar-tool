@@ -53,7 +53,7 @@ export interface DocumentStats {
 
 export interface LLMMeta {
   used: boolean;
-  provider: "none" | "local" | "hosted" | "byok";
+  provider: "none" | "local" | "hosted" | "byok" | "ollama";
   model?: string;
   skippedReason?: string;
 }
@@ -70,10 +70,18 @@ export interface RewriteRequest {
   dialect?: Dialect;
 }
 
+export type RewriteGoal = "clarity" | "brevity" | "formality";
+
+export interface RewriteVariant {
+  goal: RewriteGoal;
+  text: string;
+}
+
 export interface RewriteResponse {
   text: string;
-  provider: LLMMeta["provider"];
+  provider: LLMMeta["provider"] | "ollama" | "rules";
   model?: string;
+  variants?: RewriteVariant[];
 }
 
 export interface NextWordSuggestion {

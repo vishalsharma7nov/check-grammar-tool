@@ -78,7 +78,108 @@ const AFTER_TWO: Record<string, string[]> = {
   "me know": ["if"],
   "kind regards": [],
   "best regards": [],
+  "hope this": ["email", "message", "note", "finds"],
+  "please let": ["me", "us"],
+  "thank you": ["for", "so", "again"],
+  "looking forward": ["to"],
+  "as per": ["our", "your", "the"],
+  "with regard": ["to"],
+  "in response": ["to"],
+  "follow up": ["on", "with"],
+  "reach out": ["to", "if"],
+  "get back": ["to", "to you"],
+  "hear from": ["you"],
+  "attached is": ["the", "a"],
+  "please see": ["the", "attached", "below"],
+  "for your": ["reference", "information", "review", "approval"],
+  "at your": ["earliest", "convenience"],
+  "do not": ["hesitate", "forget"],
+  "please do": ["not", "let"],
+  "would you": ["mind", "be", "please"],
+  "could you": ["please", "send", "share", "confirm"],
+  "can you": ["please", "send", "share", "confirm"],
+  "i wanted": ["to", "to follow"],
+  "i am": ["writing", "working", "happy", "sorry", "attaching", "reaching"],
+  "i will": ["be", "send", "share", "call", "follow"],
+  "i have": ["attached", "reviewed", "a", "updated"],
+  "we are": ["pleased", "happy", "writing", "working"],
+  "we will": ["be", "send", "share", "follow"],
+  "we have": ["attached", "reviewed", "updated", "completed"],
 };
+
+const AFTER_THREE: Record<string, string[]> = {
+  "looking forward to": ["hearing", "your", "seeing", "discussing"],
+  "thank you for": ["your", "the", "sharing", "sending"],
+  "thanks for your": ["email", "message", "time", "help"],
+  "please let me": ["know"],
+  "let me know": ["if", "when", "whether"],
+  "hope this email": ["finds"],
+  "hope this message": ["finds"],
+  "as per our": ["discussion", "conversation", "agreement", "call"],
+  "as per your": ["request", "email", "message", "instructions"],
+  "with regard to": ["your", "the", "this"],
+  "in response to": ["your", "the", "this"],
+  "for your reference": [],
+  "for your information": [],
+  "for your review": [],
+  "for your approval": [],
+  "at your earliest": ["convenience"],
+  "do not hesitate": ["to"],
+  "please do not": ["hesitate"],
+  "would you mind": ["sharing", "sending", "confirming"],
+  "could you please": ["send", "share", "confirm", "review"],
+  "can you please": ["send", "share", "confirm", "review"],
+  "i wanted to": ["follow", "confirm", "check", "discuss"],
+  "i am writing": ["to", "regarding", "about"],
+  "i am reaching": ["out"],
+  "we are pleased": ["to"],
+  "we are happy": ["to"],
+  "please find attached": ["the", "a"],
+  "please see attached": ["file", "document", "report"],
+  "forward to hearing": ["from"],
+  "forward to your": ["response", "reply", "feedback"],
+  "get back to": ["you", "me"],
+  "follow up on": ["this", "the", "our"],
+  "reach out to": ["you", "me", "us"],
+  "attached is the": ["report", "file", "document", "invoice"],
+  "in spite of": ["the"],
+  "due to the": ["delay", "issue", "change", "weather"],
+  "instead of the": ["original", "planned", "proposed"],
+  "out of the": ["office", "box", "question"],
+  "make sure that": ["you", "we", "the"],
+  "feel free to": ["reach", "contact", "share", "ask"],
+  "a look at": ["the", "this", "your"],
+  "give me a": ["call", "moment", "chance"],
+  "me know if": ["you", "this", "the"],
+  "hear from you": ["soon"],
+  "writing to inform": ["you"],
+  "writing to request": ["your"],
+  "writing to confirm": ["that", "the"],
+  "writing to follow": ["up"],
+};
+
+const PHRASE_CHIPS: { prefix: string; completions: string[] }[] = [
+  { prefix: "thank you", completions: ["for your time", "for your help", "so much", "again"] },
+  { prefix: "please let me know", completions: ["if you have questions", "when you are available"] },
+  { prefix: "looking forward to", completions: ["hearing from you", "your response", "working with you"] },
+  { prefix: "hope this email", completions: ["finds you well"] },
+  { prefix: "hope this message", completions: ["finds you well"] },
+  { prefix: "as discussed", completions: ["earlier", "on the call", "in our meeting"] },
+  { prefix: "please find", completions: ["attached", "the attached file", "below"] },
+  { prefix: "for your", completions: ["reference", "information", "review", "approval"] },
+  { prefix: "at your earliest", completions: ["convenience"] },
+  { prefix: "do not hesitate", completions: ["to reach out", "to contact me"] },
+  { prefix: "i am writing", completions: ["to inform you", "to request", "regarding"] },
+  { prefix: "i wanted to", completions: ["follow up", "confirm", "check in"] },
+  { prefix: "we are pleased", completions: ["to inform you", "to share"] },
+  { prefix: "kind regards", completions: [] },
+  { prefix: "best regards", completions: [] },
+  { prefix: "with regard to", completions: ["your email", "the proposal", "this matter"] },
+  { prefix: "in response to", completions: ["your email", "your request", "your message"] },
+  { prefix: "please confirm", completions: ["receipt", "the time", "your availability"] },
+  { prefix: "please review", completions: ["and approve", "the attached", "at your convenience"] },
+  { prefix: "please share", completions: ["your feedback", "an update", "the details"] },
+];
 
 const SENTENCE_START = ["I", "The", "This", "Please", "We", "Thank", "In", "As", "After", "Could"];
 
@@ -293,6 +394,19 @@ function pushUnique(out: NextWordSuggestion[], token: string, kind: NextWordSugg
   out.push({ token, kind, hint });
 }
 
+function phraseCompletions(left: string): NextWordSuggestion[] {
+  const trimmed = left.trimEnd().toLowerCase();
+  const out: NextWordSuggestion[] = [];
+  for (const { prefix, completions } of PHRASE_CHIPS) {
+    if (trimmed === prefix || trimmed.endsWith(" " + prefix)) {
+      for (const c of completions) {
+        pushUnique(out, c, "next", `Common phrase: “${prefix} ${c}”.`);
+      }
+    }
+  }
+  return out;
+}
+
 export function suggestNext(text: string, cursor: number): NextWordSuggestion[] {
   const left = text.slice(0, Math.max(0, Math.min(cursor, text.length)));
   const { complete, partial } = lastWords(left);
@@ -322,14 +436,19 @@ export function suggestNext(text: string, cursor: number): NextWordSuggestion[] 
   }
 
   const two = complete.slice(-2).join(" ");
+  const three = complete.slice(-3).join(" ");
   const one = complete[complete.length - 1];
+  for (const s of phraseCompletions(left)) pushUnique(out, s.token, s.kind, s.hint);
+  for (const w of AFTER_THREE[three] ?? []) {
+    pushUnique(out, w, "next", `Often follows “${three}”.`);
+  }
   for (const w of AFTER_TWO[two] ?? []) {
     pushUnique(out, w, "next", `Often follows “${two}”.`);
   }
   for (const w of AFTER_ONE[one] ?? []) {
     pushUnique(out, w, "next", `A common next word after “${one}”.`);
   }
-  return out.slice(0, 5);
+  return out.slice(0, 6);
 }
 
 export function wordInsight(text: string, cursor: number): WordInsight | undefined {
@@ -458,7 +577,8 @@ export function insertSuggestion(
     return { text: next, cursor: pos };
   }
   const needsSpace = cursor > 0 && !/\s$/.test(text.slice(0, cursor));
-  const chunk = (needsSpace ? " " : "") + suggestion.token + " ";
+  const trailingSpace = suggestion.token.includes(" ") ? " " : " ";
+  const chunk = (needsSpace ? " " : "") + suggestion.token + trailingSpace;
   const next = text.slice(0, cursor) + chunk + text.slice(cursor);
   return { text: next, cursor: cursor + chunk.length };
 }

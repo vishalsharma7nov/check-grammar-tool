@@ -1,5 +1,29 @@
-const API = "http://127.0.0.1:8080";
+const DEFAULT_API = "http://127.0.0.1:8080";
 const DICT_KEY = "personalDictionary";
+const SETTINGS_KEY = "checkGrammarSettings";
+
+let apiUrl = DEFAULT_API;
+let enhancedMode = false;
+
+function loadSettings() {
+  return new Promise((resolve) => {
+    chrome.storage.sync.get([SETTINGS_KEY], (data) => {
+      const s = data[SETTINGS_KEY] || {};
+      apiUrl = String(s.apiUrl || DEFAULT_API).replace(/\/$/, "");
+      enhancedMode = Boolean(s.enhancedMode);
+      resolve({ apiUrl, enhancedMode });
+    });
+  });
+}
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== "sync" || !changes[SETTINGS_KEY]) return;
+  const s = changes[SETTINGS_KEY].newValue || {};
+  apiUrl = String(s.apiUrl || DEFAULT_API).replace(/\/$/, "");
+  enhancedMode = Boolean(s.enhancedMode);
+});
+
+loadSettings();
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
@@ -23,22 +47,49 @@ function loadDict() {
   });
 }
 
+function postCheck(body) {
+  return fetch(`${apiUrl}/v1/check`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  }).then(async (r) => {
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  });
+}
+
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === "check") {
-    loadDict().then((dict) => {
-      fetch(`${API}/v1/check`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+    loadSettings()
+      .then(() => loadDict())
+      .then((dict) => {
+        const useEnhanced = msg.enhanced ?? enhancedMode;
+        const body = {
           text: msg.text,
           dialect: msg.dialect || "en-IN",
           caret: msg.caret,
           personalDictionary: dict,
-        }),
+          ...(useEnhanced ? { includeLLM: true } : {}),
+        };
+        return postCheck(body);
       })
-        .then((r) => r.json())
-        .then(sendResponse)
-        .catch((e) => sendResponse({ error: String(e), matches: [] }));
+      .then(sendResponse)
+      .catch((e) => sendResponse({ error: String(e), matches: [] }));
+    return true;
+  }
+  if (msg.type === "getSettings") {
+    loadSettings().then((s) => sendResponse(s));
+    return true;
+  }
+  if (msg.type === "setSettings") {
+    const next = {
+      apiUrl: String(msg.apiUrl || DEFAULT_API).replace(/\/$/, ""),
+      enhancedMode: Boolean(msg.enhancedMode),
+    };
+    chrome.storage.sync.set({ [SETTINGS_KEY]: next }, () => {
+      apiUrl = next.apiUrl;
+      enhancedMode = next.enhancedMode;
+      sendResponse({ ok: true, ...next });
     });
     return true;
   }

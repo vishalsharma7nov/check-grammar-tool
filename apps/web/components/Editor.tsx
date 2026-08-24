@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { analyze, applyReplacement, insertSuggestion, writingHelp } from "@check-grammar/engine";
 import type { CheckGoals, CheckResponse, Dialect, Match, NextWordSuggestion } from "@check-grammar/protocol";
 import SuggestionPopup from "./SuggestionPopup";
@@ -16,9 +16,18 @@ import {
 import { loadPersonalDictionary, addToPersonalDictionary, savePersonalDictionary } from "../lib/personalDictionary";
 import { inferTone } from "../lib/tone";
 import { rewriteTarget } from "../lib/sentence";
+import { llmFromHealth } from "../lib/ollama";
 import { fetchRewrite, localRewrite, wordDiff, type RewriteGoal } from "../lib/rewrite";
+import type { RewriteVariant } from "@check-grammar/protocol";
+import {
+  enhancedCheck,
+  enhancedAvailable,
+  fetchEnhancedCapabilities,
+  type EnhancedCapabilities,
+} from "../lib/enhancedCheck";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const HAS_API_ENV = Boolean(process.env.NEXT_PUBLIC_API_URL);
 const SAMPLE =
   "I recieve teh letter in order to do the needful. Please prepone the meeting and kindly revert. She ate a apple. He go to office yesterday. I working on that report. Because the deadline is near. i think its fine.";
 
@@ -29,6 +38,12 @@ export default function Editor() {
   const [dialect, setDialect] = useState<Dialect>("en-IN");
   const [mode, setMode] = useState<EditorMode>("privacy");
   const [apiAvailable, setApiAvailable] = useState(false);
+  const [llmAvailable, setLlmAvailable] = useState(false);
+  const [llmBackend, setLlmBackend] = useState("");
+  const [llmModel, setLlmModel] = useState("");
+  const [capabilities, setCapabilities] = useState<EnhancedCapabilities | null>(null);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [fallbackNote, setFallbackNote] = useState("");
   const [styleGuide, setStyleGuide] = useState("- id: no-very\n  pattern: very\n  message: Avoid very\n");
   const [personalDict, setPersonalDict] = useState<string[]>([]);
   const [personalWords, setPersonalWords] = useState("");
@@ -40,6 +55,7 @@ export default function Editor() {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState<{ match: Match; x: number; y: number } | null>(null);
   const [caret, setCaret] = useState(0);
+  const [coachCaret, setCoachCaret] = useState(0);
   const [selEnd, setSelEnd] = useState(0);
   const [rewriteGoals, setRewriteGoals] = useState<RewriteGoal[]>(["clarity"]);
   const [rewriteOpen, setRewriteOpen] = useState(false);
@@ -48,12 +64,18 @@ export default function Editor() {
   const [rewriteOriginal, setRewriteOriginal] = useState("");
   const [rewriteSuggested, setRewriteSuggested] = useState("");
   const [rewriteProvider, setRewriteProvider] = useState("");
+  const [rewriteVariants, setRewriteVariants] = useState<RewriteVariant[]>([]);
+  const [rewriteVariantIdx, setRewriteVariantIdx] = useState(0);
   const [rewriteSpan, setRewriteSpan] = useState<{ offset: number; length: number } | null>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const highlightsRef = useRef<HTMLDivElement>(null);
   const hoverTimer = useRef<number>(0);
   const userClosed = useRef(false);
   const rectsRef = useRef<ReturnType<typeof matchRects>>([]);
+  const caretRef = useRef(0);
+  const selRef = useRef({ start: 0, end: 0 });
+  const openSliceRef = useRef("");
 
   useEffect(() => {
     const words = loadPersonalDictionary();
@@ -62,9 +84,23 @@ export default function Editor() {
   }, []);
 
   useEffect(() => {
-    fetch(`${API}/healthz`)
-      .then((r) => setApiAvailable(r.ok))
-      .catch(() => setApiAvailable(false));
+    fetchEnhancedCapabilities(API).then((caps) => {
+      setCapabilities(caps);
+      const ok = caps?.ok ?? false;
+      setApiAvailable(ok);
+      const llm = llmFromHealth(caps ?? { ok: false });
+      setLlmAvailable(Boolean(llm?.available));
+      setLlmBackend(llm?.backend ?? "");
+      setLlmModel(llm?.model ?? caps?.llmModel ?? "");
+      if (!ok) return;
+      const onLocalhost =
+        typeof window !== "undefined" &&
+        (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+      const suggestEnhanced = HAS_API_ENV || onLocalhost;
+      if (suggestEnhanced && enhancedAvailable(caps)) {
+        setMode((prev) => (prev === "privacy" ? "enhanced" : prev));
+      }
+    });
   }, []);
 
   const goals = useMemo<CheckGoals>(() => ({ formality, intent }), [formality, intent]);
@@ -79,28 +115,33 @@ export default function Editor() {
 
   const run = useCallback(async () => {
     setErr("");
-    const req = { text, dialect, styleGuide, caret, personalDictionary, goals };
+    setFallbackNote("");
+    const req = { text, dialect, styleGuide, caret: caretRef.current, personalDictionary, goals };
     if (mode === "privacy") {
       setRes(analyze(req));
       return;
     }
+    if (mode === "enhanced") {
+      const out = await enhancedCheck(API, req, { includeLLM: llmAvailable, llmAvailable });
+      setRes(out.response);
+      if (out.mode === "privacy" && out.fallbackReason) {
+        setFallbackNote(`Enhanced unavailable — using Privacy mode (${out.fallbackReason})`);
+      }
+      return;
+    }
     try {
-      const body =
-        mode === "enhanced"
-          ? { ...req, includeLLM: true }
-          : req;
       const r = await fetch(`${API}/v1/check`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify(req),
       });
       if (!r.ok) throw new Error(await r.text());
       setRes(await r.json());
     } catch (e) {
       setErr(String(e));
-      if (mode === "enhanced") setRes(analyze(req));
+      setRes(analyze(req));
     }
-  }, [text, dialect, mode, styleGuide, caret, personalDictionary, goals]);
+  }, [text, dialect, mode, styleGuide, personalDictionary, goals, llmAvailable]);
 
   useEffect(() => {
     const t = setTimeout(run, 280);
@@ -124,18 +165,42 @@ export default function Editor() {
     return c;
   }, [matches]);
 
-  const help = useMemo(() => writingHelp(text, caret), [text, caret]);
+  const help = useMemo(() => writingHelp(text, coachCaret), [text, coachCaret]);
 
   const rewriteDiff = useMemo(
     () => wordDiff(rewriteOriginal, rewriteSuggested),
     [rewriteOriginal, rewriteSuggested],
   );
 
+  function syncHighlightScroll() {
+    const ta = taRef.current;
+    const hl = highlightsRef.current;
+    if (!ta || !hl) return;
+    if (hl.scrollTop !== ta.scrollTop) hl.scrollTop = ta.scrollTop;
+    if (hl.scrollLeft !== ta.scrollLeft) hl.scrollLeft = ta.scrollLeft;
+  }
+
+  function rememberSelection(ta: HTMLTextAreaElement) {
+    caretRef.current = ta.selectionStart;
+    selRef.current = { start: ta.selectionStart, end: ta.selectionEnd };
+    setCaret(ta.selectionStart);
+    setSelEnd(ta.selectionEnd);
+  }
+
   function markCaret() {
     const ta = taRef.current;
-    if (ta) {
-      setCaret(ta.selectionStart);
-      setSelEnd(ta.selectionEnd);
+    if (ta) rememberSelection(ta);
+  }
+
+  function restoreSelectionIfFocused() {
+    const ta = taRef.current;
+    if (!ta || document.activeElement !== ta) return;
+    const { start, end } = selRef.current;
+    const len = ta.value.length;
+    const s = Math.min(start, len);
+    const e = Math.min(Math.max(end, s), len);
+    if (ta.selectionStart !== s || ta.selectionEnd !== e) {
+      ta.setSelectionRange(s, e);
     }
   }
 
@@ -151,8 +216,10 @@ export default function Editor() {
   }
 
   function pickWord(s: NextWordSuggestion) {
-    const next = insertSuggestion(text, caret, s);
+    const next = insertSuggestion(text, caretRef.current, s);
     setText(next.text);
+    caretRef.current = next.cursor;
+    selRef.current = { start: next.cursor, end: next.cursor };
     setCaret(next.cursor);
     userClosed.current = false;
     setOpen(null);
@@ -177,10 +244,32 @@ export default function Editor() {
     refreshRects();
   }, [matches, text]);
 
+  useEffect(() => {
+    const t = setTimeout(() => setCoachCaret(caretRef.current), 350);
+    return () => clearTimeout(t);
+  }, [text, caret]);
+
+  useLayoutEffect(() => {
+    syncHighlightScroll();
+    restoreSelectionIfFocused();
+  }, [segments, res]);
+
+  useEffect(() => {
+    const ta = taRef.current;
+    if (!ta) return;
+    const ro = new ResizeObserver(() => {
+      syncHighlightScroll();
+      refreshRects();
+    });
+    ro.observe(ta);
+    return () => ro.disconnect();
+  }, []);
+
   function openMatch(m: Match, select = true) {
     const ta = taRef.current;
     if (!ta) return;
     userClosed.current = false;
+    openSliceRef.current = text.slice(m.offset, m.offset + m.length);
     const rect = textareaRangeRect(ta, m.offset, m.offset + m.length);
     const pad = 8;
     const width = 320;
@@ -193,6 +282,8 @@ export default function Editor() {
 
   function loadExample() {
     setText(SAMPLE);
+    caretRef.current = SAMPLE.length;
+    selRef.current = { start: SAMPLE.length, end: SAMPLE.length };
     setCaret(SAMPLE.length);
     userClosed.current = false;
     setOpen(null);
@@ -238,6 +329,8 @@ export default function Editor() {
     const next = applyReplacement(text, m.offset, m.length, replacement);
     const cursor = m.offset + replacement.length;
     setText(next);
+    caretRef.current = cursor;
+    selRef.current = { start: cursor, end: cursor };
     setCaret(cursor);
     userClosed.current = false;
     setOpen(null);
@@ -278,15 +371,31 @@ export default function Editor() {
     setRewriteError("");
     setRewriteOriginal(target.snippet);
     setRewriteSuggested("");
+    setRewriteVariants([]);
+    setRewriteVariantIdx(0);
     setRewriteSpan({ offset: target.offset, length: target.length });
 
     const useApi = mode === "local" || mode === "enhanced";
     const out = useApi
       ? await fetchRewrite(API, target.snippet, goalsActive, dialect)
-      : { text: localRewrite(target.snippet, goalsActive), provider: "rules" };
-    setRewriteSuggested(out.text);
+      : {
+          text: localRewrite(target.snippet, goalsActive),
+          provider: "rules",
+          variants: goalsActive.map((g) => ({ goal: g, text: localRewrite(target.snippet, [g]) })),
+        };
+    const variants = out.variants?.length ? out.variants : [{ goal: goalsActive[0], text: out.text }];
+    setRewriteVariants(variants);
+    setRewriteVariantIdx(0);
+    setRewriteSuggested(variants[0]?.text ?? out.text);
     setRewriteProvider(out.provider);
     setRewriteLoading(false);
+  }
+
+  function selectRewriteVariant(index: number) {
+    const v = rewriteVariants[index];
+    if (!v) return;
+    setRewriteVariantIdx(index);
+    setRewriteSuggested(v.text);
   }
 
   function acceptRewrite() {
@@ -294,6 +403,8 @@ export default function Editor() {
     const next = applyReplacement(text, rewriteSpan.offset, rewriteSpan.length, rewriteSuggested);
     const cursor = rewriteSpan.offset + rewriteSuggested.length;
     setText(next);
+    caretRef.current = cursor;
+    selRef.current = { start: cursor, end: cursor };
     setCaret(cursor);
     setRewriteOpen(false);
     setRewriteSpan(null);
@@ -324,9 +435,21 @@ export default function Editor() {
       setOpen(null);
       return;
     }
-    const id = requestAnimationFrame(() => openMatch(still, false));
+    const id = requestAnimationFrame(() => {
+      const ta = taRef.current;
+      if (!ta) return;
+      const rect = textareaRangeRect(ta, still.offset, still.offset + still.length);
+      const pad = 8;
+      const width = 320;
+      const left = Math.min(Math.max(pad, rect.left), window.innerWidth - width - pad);
+      const below = rect.bottom + 10;
+      const top = below + 220 > window.innerHeight ? rect.top - 210 : below;
+      setOpen((prev) =>
+        prev ? { ...prev, match: still, x: left, y: Math.max(pad, top) } : null,
+      );
+    });
     return () => cancelAnimationFrame(id);
-  }, [matches, text]);
+  }, [matches, open?.match.ruleId, open?.match.offset]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -340,6 +463,7 @@ export default function Editor() {
       if (
         t.closest(".sg-pop") ||
         t.closest(".rw-panel") ||
+        t.closest(".rw-backdrop") ||
         t.closest("textarea.doc") ||
         t.closest(".issue") ||
         t.closest(".sg-badge") ||
@@ -359,99 +483,132 @@ export default function Editor() {
 
   const original = open ? text.slice(open.match.offset, open.match.offset + open.match.length) : "";
 
+  const lt = capabilities?.enhanced?.languageTool;
+  const llm = capabilities?.enhanced?.llm;
+  const showCapabilityBanner =
+    apiAvailable && enhancedAvailable(capabilities) && !bannerDismissed && mode !== "privacy";
+
+  const isClean = matches.length === 0;
+
   return (
     <div className="editor-wrap">
-      <div>
-        <div className="toolbar">
-          <label>
-            Dialect{" "}
-            <select value={dialect} onChange={(e) => setDialect(e.target.value as Dialect)}>
-              <option>en-IN</option>
-              <option>en-US</option>
-              <option>en-GB</option>
-              <option>en-AU</option>
-              <option>en-CA</option>
-            </select>
-          </label>
-          <label>
-            Mode{" "}
-            <select value={mode} onChange={(e) => setMode(e.target.value as EditorMode)}>
-              <option value="privacy">Privacy (in-browser)</option>
-              <option value="local">Local API</option>
-              <option value="enhanced" disabled={!apiAvailable}>
-                Enhanced{apiAvailable ? " (API + LLM)" : " (start API first)"}
-              </option>
-            </select>
-          </label>
-          <label>
-            Formality{" "}
-            <select value={formality} onChange={(e) => setFormality(e.target.value as CheckGoals["formality"])}>
-              <option value="casual">Casual</option>
-              <option value="neutral">Neutral</option>
-              <option value="formal">Formal</option>
-            </select>
-          </label>
-          <label>
-            Intent{" "}
-            <select value={intent} onChange={(e) => setIntent(e.target.value as CheckGoals["intent"])}>
-              <option value="email">Email</option>
-              <option value="essay">Essay</option>
-              <option value="chat">Chat</option>
-              <option value="pr">PR / docs</option>
-              <option value="commit">Commit</option>
-              <option value="other">Other</option>
-            </select>
-          </label>
-          <label>
-            Personal dict{" "}
-            <input
-              type="text"
-              value={personalWords}
-              placeholder="names, jargon"
-              onChange={(e) => {
-                setPersonalWords(e.target.value);
-                const parsed = e.target.value
-                  .split(/[,;]+/)
-                  .map((w) => w.trim())
-                  .filter(Boolean);
-                savePersonalDictionary(parsed);
-                setPersonalDict(parsed);
-              }}
-            />
-          </label>
-          <span className="rw-goals">
-            Rewrite:{" "}
-            {(["clarity", "brevity", "formality"] as RewriteGoal[]).map((g) => (
-              <label key={g} className="rw-goal">
-                <input
-                  type="checkbox"
-                  checked={rewriteGoals.includes(g)}
-                  onChange={() => toggleRewriteGoal(g)}
-                />{" "}
-                {g}
-              </label>
-            ))}
+      {showCapabilityBanner && (
+        <div className="enhanced-banner" role="status">
+          <span>
+            Enhanced mode available — LanguageTool
+            {lt?.reachable ? " ✓" : lt?.configured ? " (starting…)" : ""} + local LLM
+            {llm?.available ? " ✓" : llm?.configured ? " (start Ollama or ml/serve)" : ""}. Checks run via <code>{API}</code>; Privacy mode stays in-browser only.
           </span>
-          <button type="button" onClick={runRewrite}>
-            Rewrite
-          </button>
-          <button className="primary" type="button" onClick={run}>
-            Recheck
-          </button>
-          <button type="button" onClick={loadExample}>
-            Load example
+          <button type="button" className="banner-dismiss" onClick={() => setBannerDismissed(true)}>
+            Dismiss
           </button>
         </div>
+      )}
+      <div className="editor-main">
+        <div className="toolbar">
+          <div className="toolbar-group">
+            <span className="toolbar-group-label">Check</span>
+            <label>
+              <span className="field-label">Dialect</span>
+              <select value={dialect} onChange={(e) => setDialect(e.target.value as Dialect)}>
+                <option>en-IN</option>
+                <option>en-US</option>
+                <option>en-GB</option>
+                <option>en-AU</option>
+                <option>en-CA</option>
+              </select>
+            </label>
+            <label>
+              <span className="field-label">Mode</span>
+              <select value={mode} onChange={(e) => setMode(e.target.value as EditorMode)}>
+                <option value="privacy">Privacy (in-browser)</option>
+                <option value="local">Local API</option>
+                <option value="enhanced" disabled={!apiAvailable}>
+                  Enhanced
+                  {apiAvailable
+                    ? llmAvailable
+                      ? ` (API + LLM${llmBackend === "ollama" ? " · Ollama" : ""})`
+                      : " (API — start Ollama for LLM)"
+                    : " (start API first)"}
+                </option>
+              </select>
+            </label>
+            <label>
+              <span className="field-label">Formality</span>
+              <select value={formality} onChange={(e) => setFormality(e.target.value as CheckGoals["formality"])}>
+                <option value="casual">Casual</option>
+                <option value="neutral">Neutral</option>
+                <option value="formal">Formal</option>
+              </select>
+            </label>
+            <label>
+              <span className="field-label">Intent</span>
+              <select value={intent} onChange={(e) => setIntent(e.target.value as CheckGoals["intent"])}>
+                <option value="email">Email</option>
+                <option value="essay">Essay</option>
+                <option value="chat">Chat</option>
+                <option value="pr">PR / docs</option>
+                <option value="commit">Commit</option>
+                <option value="other">Other</option>
+              </select>
+            </label>
+            <label>
+              <span className="field-label">Dictionary</span>
+              <input
+                type="text"
+                value={personalWords}
+                placeholder="names, jargon"
+                onChange={(e) => {
+                  setPersonalWords(e.target.value);
+                  const parsed = e.target.value
+                    .split(/[,;]+/)
+                    .map((w) => w.trim())
+                    .filter(Boolean);
+                  savePersonalDictionary(parsed);
+                  setPersonalDict(parsed);
+                }}
+              />
+            </label>
+          </div>
+          <div className="toolbar-divider" aria-hidden />
+          <div className="toolbar-group">
+            <span className="toolbar-group-label">Rewrite</span>
+            <span className="rw-goals">
+              {(["clarity", "brevity", "formality"] as RewriteGoal[]).map((g) => (
+                <label key={g} className="rw-goal">
+                  <input
+                    type="checkbox"
+                    checked={rewriteGoals.includes(g)}
+                    onChange={() => toggleRewriteGoal(g)}
+                  />
+                  {g}
+                </label>
+              ))}
+            </span>
+            <button type="button" className="secondary" onClick={runRewrite}>
+              Rewrite
+            </button>
+          </div>
+          <div className="toolbar-divider" aria-hidden />
+          <div className="toolbar-group toolbar-actions">
+            <button className="primary" type="button" onClick={run}>
+              Recheck
+            </button>
+            <button type="button" className="ghost" onClick={loadExample}>
+              Load example
+            </button>
+          </div>
+        </div>
         <div className="editor-stage" ref={stageRef}>
-          <div className="editor-highlights" aria-hidden>
+          <div className="editor-highlights" ref={highlightsRef} aria-hidden>
             {!text ? (
               <span className="doc-ph">Start typing. Spelling is checked against a free on-device English word list.</span>
             ) : (
               segments.map((seg, i) =>
                 seg.match ? (
-                  <mark key={i} className={`ul cat-${seg.match.category}`}>
+                  <span key={i} className={`hl cat-${seg.match.category}`}>
                     {seg.text}
-                  </mark>
+                  </span>
                 ) : (
                   <span key={i}>{seg.text}</span>
                 ),
@@ -465,10 +622,14 @@ export default function Editor() {
             placeholder="Start typing…"
             spellCheck={false}
             onChange={(e) => {
-              setText(e.target.value);
-              setCaret(e.target.selectionStart);
-              setSelEnd(e.target.selectionEnd);
-              setOpen(null);
+              const v = e.target.value;
+              setText(v);
+              rememberSelection(e.target);
+              if (open) {
+                const m = open.match;
+                const edited = v.slice(m.offset, m.offset + m.length);
+                if (edited !== openSliceRef.current) setOpen(null);
+              }
             }}
             onSelect={markCaret}
             onKeyDown={(e) => {
@@ -477,7 +638,10 @@ export default function Editor() {
                 pickWord(help.next[0]);
               }
             }}
-            onClick={onTextClick}
+            onClick={(e) => {
+              markCaret();
+              onTextClick(e);
+            }}
             onMouseMove={onTextMove}
             onMouseLeave={() => {
               window.clearTimeout(hoverTimer.current);
@@ -485,63 +649,124 @@ export default function Editor() {
             }}
             onKeyUp={markCaret}
             onScroll={(e) => {
-              const h = e.currentTarget.parentElement?.querySelector(".editor-highlights") as HTMLElement | null;
-              if (h) {
-                h.scrollTop = e.currentTarget.scrollTop;
-                h.scrollLeft = e.currentTarget.scrollLeft;
+              const hl = highlightsRef.current;
+              if (hl) {
+                hl.scrollTop = e.currentTarget.scrollTop;
+                hl.scrollLeft = e.currentTarget.scrollLeft;
               }
-              refreshRects();
+              requestAnimationFrame(refreshRects);
             }}
           />
         </div>
-        <WriteCoach next={help.next} tone={tone} onPick={pickWord} />
+        <div className="status-bar">
+          <WriteCoach
+            next={help.next}
+            tone={tone}
+            onPick={pickWord}
+            llm={
+              mode === "enhanced" && (llmAvailable || res?.llm?.used)
+                ? {
+                    active: true,
+                    backend: llmBackend || (res?.llm?.provider === "ollama" ? "ollama" : res?.llm?.provider),
+                    model: res?.llm?.model || llmModel,
+                  }
+                : undefined
+            }
+          />
+        </div>
         {res && (
-          <p className="stats">
-            {res.stats.wordCount} words · {res.stats.sentenceCount} sentences · readability {res.stats.readability} ·{" "}
-            {Object.entries(counts).map(([k, v]) => `${k}:${v}`).join(" · ") || "clean"}
-            {res.llm?.used ? ` · LLM (${res.llm.provider})` : ""}
-          </p>
+          <div className="stats">
+            <span className="stat-chip">{res.stats.wordCount} words</span>
+            <span className="stat-chip">{res.stats.sentenceCount} sentences</span>
+            <span className="stat-chip">Readability {res.stats.readability}</span>
+            {Object.entries(counts).map(([k, v]) => (
+              <span key={k} className="stat-chip">{k}: {v}</span>
+            ))}
+            {isClean && Object.keys(counts).length === 0 && (
+              <span className="stat-chip stat-clean">No issues</span>
+            )}
+            {res.llm?.used && <span className="stat-chip">LLM ({res.llm.provider})</span>}
+          </div>
         )}
-        {err && <p className="stats">{err}</p>}
+        {err && <p className="stats stats-err">{err}</p>}
+        {fallbackNote && <p className="stats stats-fallback">{fallbackNote}</p>}
       </div>
-      <aside>
-        <h2 style={{ fontFamily: "var(--sans)", marginTop: 0 }}>Write better</h2>
-        <p className="stats">
-          Chips under the text guess the next word. Click a word for synonyms. Underlines still fix errors.{" "}
-          {mode === "privacy"
-            ? "All of this stays in this tab."
-            : mode === "enhanced"
-              ? `Enhanced: POST ${API}/v1/check + optional LLM`
-              : `POST ${API}/v1/check`}
-        </p>
-        {help.insight && (
-          <div className="issue cat-clarity">
-            <h3>Word: {help.insight.word}</h3>
+      <aside className="sidebar">
+        <div className="sidebar-panel">
+          <div className="sidebar-panel-head">
+            <h2>Write better</h2>
+          </div>
+          <div className="sidebar-panel-body">
             <p>
-              {help.insight.note}
-              {help.insight.synonyms.length ? ` Similar: ${help.insight.synonyms.join(", ")}.` : ""}
+              Next-word hints and writing tips appear here. Click underlines in the editor to fix errors.{" "}
+              {mode === "privacy"
+                ? "All processing stays in this tab."
+                : mode === "enhanced"
+                  ? llmAvailable
+                    ? `Enhanced via ${API} + LLM`
+                    : `Enhanced via ${API} (LLM unavailable)`
+                  : `Checking via ${API}`}
             </p>
+            {help.insight && (
+              <div className="issue cat-clarity">
+                <h3>{help.insight.word}</h3>
+                <p>
+                  {help.insight.note}
+                  {help.insight.synonyms.length ? ` Similar: ${help.insight.synonyms.join(", ")}.` : ""}
+                </p>
+              </div>
+            )}
+            {help.tips.length > 0 ? (
+              help.tips.map((t) => (
+                <div key={t.id} className="issue cat-clarity">
+                  <h3>{t.title}</h3>
+                  <p>{t.detail}</p>
+                </div>
+              ))
+            ) : !help.insight ? (
+              <div className="sidebar-empty">
+                <div className="sidebar-empty-icon" aria-hidden>✦</div>
+                <p>Start typing for writing tips and word suggestions.</p>
+              </div>
+            ) : null}
           </div>
-        )}
-        {help.tips.map((t) => (
-          <div key={t.id} className="issue cat-clarity">
-            <h3>{t.title}</h3>
-            <p>{t.detail}</p>
+        </div>
+        <div className="sidebar-panel">
+          <div className="sidebar-panel-head">
+            <h2>Issues</h2>
+            <span className={`issue-count${isClean ? " issue-count-zero" : ""}`} aria-label={`${matches.length} issues`}>
+              {matches.length}
+            </span>
           </div>
-        ))}
-        <h2 style={{ fontFamily: "var(--sans)" }}>Issues</h2>
-        {matches.map((m, i) => (
-          <button key={i} type="button" className={`issue cat-${m.category}`} onClick={() => openMatch(m)}>
-            <h3>{m.message}</h3>
-            <p>{m.explanation}</p>
-          </button>
-        ))}
-        <h3>Style-as-code</h3>
-        <textarea
-          style={{ width: "100%", minHeight: 90, fontFamily: "ui-monospace, monospace", fontSize: 12 }}
-          value={styleGuide}
-          onChange={(e) => setStyleGuide(e.target.value)}
-        />
+          <div className="sidebar-panel-body">
+            {matches.length > 0 ? (
+              matches.map((m, i) => (
+                <button key={i} type="button" className={`issue cat-${m.category}`} onClick={() => openMatch(m)}>
+                  <h3>{m.message}</h3>
+                  <p>{m.explanation}</p>
+                </button>
+              ))
+            ) : (
+              <div className="sidebar-empty">
+                <div className="sidebar-empty-icon" aria-hidden>✓</div>
+                <p>Looking good — no issues found.</p>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="sidebar-panel">
+          <div className="sidebar-panel-head">
+            <h2>Style guide</h2>
+          </div>
+          <div className="sidebar-panel-body">
+            <textarea
+              className="style-guide-textarea"
+              value={styleGuide}
+              onChange={(e) => setStyleGuide(e.target.value)}
+              aria-label="Custom style rules"
+            />
+          </div>
+        </div>
       </aside>
       {matches.length > 0 && (
         <button
@@ -576,6 +801,9 @@ export default function Editor() {
           beforeSegs={rewriteDiff.before}
           afterSegs={rewriteDiff.after}
           provider={rewriteProvider}
+          variants={rewriteVariants}
+          selectedVariant={rewriteVariantIdx}
+          onSelectVariant={selectRewriteVariant}
           loading={rewriteLoading}
           error={rewriteError}
           onAccept={acceptRewrite}

@@ -7,6 +7,7 @@ import type {
   Match,
 } from "../../protocol/src/index";
 import { checkContextSpelling } from "./contextSpell.ts";
+import { checkInclusiveLanguage } from "./inclusive.ts";
 import { checkSentenceMaking, isLegitPassive } from "./sentenceMaking.ts";
 import { analyzeTone } from "./tone.ts";
 import { knownWord, skipSpellToken, spellSuggestions } from "./spell.ts";
@@ -514,6 +515,7 @@ export function analyze(req: CheckRequest): CheckResponse {
 
   const skip = (i: number) => isCodeRegion(text, i);
   matches.push(...checkContextSpelling(text, skip));
+  matches.push(...checkInclusiveLanguage(text, skip));
   matches.push(...checkSentenceMaking(text, skip));
   matches.push(...analyzeTone(text, req.goals, skip).matches);
 

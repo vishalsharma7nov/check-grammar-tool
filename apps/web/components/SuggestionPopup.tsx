@@ -35,8 +35,8 @@ export default function SuggestionPopup({
   onIgnoreRule,
   onAddToDictionary,
 }: Props) {
-  const primary = match.replacements[0];
-  const extras = match.replacements.slice(1, 4);
+  const chips = match.replacements.slice(0, 3);
+  const primary = chips[0];
   const canAddDict = match.category === "spelling" && onAddToDictionary && original.trim();
 
   return (
@@ -53,19 +53,18 @@ export default function SuggestionPopup({
           ×
         </button>
       </div>
-      {primary != null ? (
-        <button type="button" className="sg-pop-fix" onClick={() => onAccept(primary)}>
+      <p className="sg-pop-msg">{match.message}</p>
+      {chips.length > 0 && (
+        <div className="sg-pop-alts">
           <span className="sg-pop-from">{original}</span>
           <span className="sg-pop-arrow">→</span>
-          <span className="sg-pop-to">{primary}</span>
-        </button>
-      ) : (
-        <p className="sg-pop-msg">{match.message}</p>
-      )}
-      {extras.length > 0 && (
-        <div className="sg-pop-alts">
-          {extras.map((r) => (
-            <button key={r} type="button" onClick={() => onAccept(r)}>
+          {chips.map((r, i) => (
+            <button
+              key={r}
+              type="button"
+              className={i === 0 ? "sg-pop-chip primary" : "sg-pop-chip"}
+              onClick={() => onAccept(r)}
+            >
               {r}
             </button>
           ))}

@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -38,11 +39,16 @@ func Listen(cfg config.Config) error {
 	r.Use(middleware.RequestID, middleware.RealIP, middleware.Logger, middleware.Recoverer)
 	r.Use(cors(cfg.WebOrigin))
 
+	if cfg.LanguageToolURL != "" {
+		if ok, err := check.ProbeLanguageTool(); ok {
+			slog.Info("languagetool ready", "url", cfg.LanguageToolURL)
+		} else if err != nil {
+			slog.Warn("languagetool unreachable at startup", "url", cfg.LanguageToolURL, "err", err)
+		}
+	}
+
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, 200, map[string]any{
-			"ok": true, "llmProvider": cfg.LLMProvider, "llmBaseUrl": cfg.LLMBaseURL,
-			"dataPath": "rules-on-this-process; llm=" + cfg.LLMProvider + " at " + cfg.LLMBaseURL,
-		})
+		writeJSON(w, 200, s.healthPayload())
 	})
 	r.Get("/v1/data-path", s.dataPath)
 	r.Get("/v1/entitlements", s.entitlements)
@@ -57,6 +63,49 @@ func Listen(cfg config.Config) error {
 
 	slog.Info("listening", "addr", cfg.Addr)
 	return http.ListenAndServe(cfg.Addr, r)
+}
+
+func (s *Server) healthPayload() map[string]any {
+	ltConfigured := s.cfg.LanguageToolURL != ""
+	ltReachable := false
+	ltErr := ""
+	if ltConfigured {
+		if ok, err := check.ProbeLanguageTool(); ok {
+			ltReachable = true
+		} else if err != nil {
+			ltErr = err.Error()
+		}
+	}
+	llmStatus := llm.Detect(context.Background(), s.cfg.LLMBaseURL)
+	llmConfigured := s.cfg.LLMBaseURL != "" || llmStatus.Available
+	return map[string]any{
+		"ok":            true,
+		"llmProvider":   s.cfg.LLMProvider,
+		"llmBaseUrl":    s.cfg.LLMBaseURL,
+		"llmAvailable":  llmStatus.Available,
+		"llmBackend":    llmStatus.Backend,
+		"llmModel":      llmStatus.Model,
+		"llmModels":     llmStatus.Models,
+		"ollamaBaseUrl": llm.OllamaBaseURL(),
+		"dataPath":      "rules-on-this-process; llm=" + s.cfg.LLMProvider + " at " + s.cfg.LLMBaseURL,
+		"enhanced": map[string]any{
+			"languageTool": map[string]any{
+				"configured": ltConfigured,
+				"reachable":  ltReachable,
+				"url":        s.cfg.LanguageToolURL,
+				"error":      ltErr,
+			},
+			"llm": map[string]any{
+				"configured": llmConfigured,
+				"available":  llmStatus.Available,
+				"backend":    llmStatus.Backend,
+				"provider":   s.cfg.LLMProvider,
+				"baseUrl":    s.cfg.LLMBaseURL,
+				"model":      llmStatus.Model,
+				"models":     llmStatus.Models,
+			},
+		},
+	}
 }
 
 func (s *Server) dataPath(w http.ResponseWriter, r *http.Request) {
@@ -159,7 +208,11 @@ func (s *Server) rewrite(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 502)
 		return
 	}
-	writeJSON(w, 200, map[string]any{"text": out.Text, "provider": out.Provider, "model": out.Model})
+	payload := map[string]any{"text": out.Text, "provider": out.Provider, "model": out.Model}
+	if len(out.Variants) > 0 {
+		payload["variants"] = out.Variants
+	}
+	writeJSON(w, 200, payload)
 }
 
 func (s *Server) register(w http.ResponseWriter, r *http.Request) {

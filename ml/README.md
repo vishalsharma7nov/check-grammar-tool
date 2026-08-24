@@ -37,6 +37,16 @@ python ml/export/to_gguf_stub.py --src ml/checkpoints/fixer --out ml/export/chec
 python ml/serve/server.py --port 8081
 ```
 
+### Ollama (local LLM for Enhanced mode)
+
+The serve bridge auto-detects Ollama at `OLLAMA_BASE_URL` (default `http://127.0.0.1:11434`). When a model is pulled, grammar check and rewrite use it; otherwise a rule stub handles dev offline.
+
+```bash
+ollama pull llama3.2   # or: ollama pull mistral
+npm run llm:serve      # from repo root; or: python ml/serve/server.py --port 8081
+python ml/serve/test_ollama.py -v
+```
+
 Cluster scale (do not run on M2): `ml/configs/cluster-1b.yaml`.
 
 Licenses for public GEC corpora: `ml/data/LICENSES.md`. Never train on user docs unless they opt in.

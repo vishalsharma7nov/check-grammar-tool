@@ -45,3 +45,13 @@
 {"text":"Theyre wont come and doesnt matter.","expectRule":"GRAMMAR_MISSING_APOSTROPHE"}
 {"text":"Use irregardless of the cost.","expectRule":"GRAMMAR_IRREGARDLESS"}
 {"text":"I ordered an expresso.","expectRule":"SPELL_EXPRESSO"}
+{"text":"Me and john went home.","expectRule":"GRAMMAR_ME_AND_SUBJECT","skipLT":true}
+{"text":"She are late today.","expectRule":"GRAMMAR_SV_ARE","skipLT":true}
+{"text":"I can able to help.","expectRule":"GRAMMAR_CAN_ABLE","skipLT":true}
+{"text":"We need to discuss about the plan.","expectRule":"GRAMMAR_DISCUSS_ABOUT","skipLT":true}
+{"text":"Please return back the file.","expectRule":"GRAMMAR_RETURN_BACK","skipLT":true}
+{"text":"This are wrong.","expectRule":"GRAMMAR_THIS_ARE","skipLT":true}
+{"text":"Although it rained but we went.","expectRule":"GRAMMAR_ALTHOUGH_BUT","skipLT":true}
+{"text":"We need to loose weight.","expectRule":"GRAMMAR_LOSE_LOOSE","skipLT":true}
+{"text":"Everyday I go to the gym.","expectRule":"GRAMMAR_EVERYDAY","skipLT":true}
+{"text":"They is wrong.","expectRule":"GRAMMAR_SV_IS","skipLT":true}
