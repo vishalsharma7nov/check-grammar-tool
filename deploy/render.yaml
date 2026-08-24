@@ -13,6 +13,7 @@ services:
   - type: pserv
     name: languagetool
     runtime: image
+    region: oregon
     image:
       url: docker.io/silviof/docker-languagetool:latest
     # Starter (512 MB) may OOM under load; bump to Standard (2 GB) if LT restarts.
@@ -26,11 +27,15 @@ services:
   - type: web
     name: check-grammar-api
     runtime: docker
+    region: oregon
     dockerfilePath: server/api/Dockerfile
     dockerContext: .
     plan: free
     healthCheckPath: /healthz
     envVars:
+      # Render routes inbound traffic to PORT (default 10000); API must match.
+      - key: PORT
+        value: "8080"
       - key: API_ADDR
         value: :8080
       - key: CHECK_ENGINE_CLI
