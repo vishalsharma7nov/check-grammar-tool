@@ -7,7 +7,8 @@ import type { Dialect, RewriteGoal, RewriteVariant } from "@check-grammar/protoc
 import { localRewriteVariants } from "./rewrite";
 
 export const DEFAULT_LLM_BASE = "https://api.groq.com/openai/v1";
-export const DEFAULT_LLM_MODEL = "llama-3.1-8b-instant";
+/** Groq free/dev default — llama-3.1-8b-instant retired 2026-08-16; see console.groq.com/docs/deprecations */
+export const DEFAULT_LLM_MODEL = "openai/gpt-oss-20b";
 
 export type LlmEnv = {
   apiKey: string;
@@ -89,7 +90,11 @@ export async function chatCompletion(
     });
     const raw = await res.text();
     if (!res.ok) {
-      throw new Error(`llm http ${res.status}: ${raw.slice(0, 400)}`);
+      const hint =
+        /model_not_found|does not exist|do not have access/i.test(raw)
+          ? ` Set LLM_MODEL to a current Groq model (default: ${DEFAULT_LLM_MODEL}; see https://console.groq.com/docs/models).`
+          : "";
+      throw new Error(`llm http ${res.status}: ${raw.slice(0, 400)}${hint}`);
     }
     const parsed = JSON.parse(raw) as {
       choices?: { message?: { content?: string } }[];

@@ -53,8 +53,10 @@ The editor prefers same-origin `POST /api/rewrite` and `POST /api/check`. Those 
 ```
 LLM_API_KEY=gsk_...
 LLM_BASE_URL=https://api.groq.com/openai/v1
-LLM_MODEL=llama-3.1-8b-instant
+LLM_MODEL=openai/gpt-oss-20b
 ```
+
+(`llama-3.1-8b-instant` was retired by Groq on 2026-08-16; if you still have it in Vercel env, update `LLM_MODEL` and redeploy.)
 
 4. Free signup: [console.groq.com](https://console.groq.com) → create an API key.
 5. **Do not** prefix with `NEXT_PUBLIC_` — the key must never ship to the browser.

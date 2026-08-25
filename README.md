@@ -101,7 +101,7 @@ Deploy the **web editor only** (Privacy mode) for free. Full steps and requireme
 ```
 LLM_API_KEY=gsk_...
 LLM_BASE_URL=https://api.groq.com/openai/v1
-LLM_MODEL=llama-3.1-8b-instant
+LLM_MODEL=openai/gpt-oss-20b
 ```
 
 Signup: [console.groq.com](https://console.groq.com). Same-origin routes: `POST /api/rewrite`, `POST /api/check`, `GET /api/healthz`. Details: [docs/vercel.md](docs/vercel.md).
