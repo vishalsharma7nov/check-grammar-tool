@@ -35,9 +35,18 @@ export default function WriteCoach({ next, tone, onPick, llm }: Props) {
         {llm?.active ? (
           <span
             className="llm-badge"
-            title={llm.model ? `Local LLM: ${llm.model}` : "Local LLM active"}
+            title={
+              llm.model
+                ? llm.backend === "groq"
+                  ? `Groq: ${llm.model}`
+                  : `LLM: ${llm.model}`
+                : llm.backend === "groq"
+                  ? "Groq LLM active"
+                  : "Local LLM active"
+            }
           >
-            LLM{llm.backend === "ollama" ? " · Ollama" : ""}
+            LLM
+            {llm.backend === "ollama" ? " · Ollama" : llm.backend === "groq" ? " · Groq" : ""}
             {llm.model ? ` · ${llm.model.split(":")[0]}` : ""}
           </span>
         ) : null}

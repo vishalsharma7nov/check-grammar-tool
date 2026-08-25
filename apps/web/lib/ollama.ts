@@ -1,5 +1,5 @@
 /** Health / LLM availability from GET /healthz */
-export type LlmBackend = "ollama" | "bridge" | "none";
+export type LlmBackend = "ollama" | "bridge" | "groq" | "none";
 
 export interface LlmHealth {
   configured: boolean;

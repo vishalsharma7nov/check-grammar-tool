@@ -29,11 +29,44 @@ Optional later (not required for the free demo):
 | Privacy mode (in-browser spelling ~370k words, grammar, next-word) | Yes |
 | Suggestion popup / underlines as you type | Yes |
 | Plagiarism check (`POST /api/plagiarism`) | Yes — set `PLAGIARISM_API_KEY` (see below) |
+| Cloud rewrite via Groq (`POST /api/rewrite`) | Yes — set `LLM_API_KEY` (see [Groq LLM](#groq-llm-on-vercel-free-cloud-rewrite)) |
+| Enhanced-lite check (`POST /api/check`) | Yes — engine in Node + optional Groq augment |
 | Local API mode pointing at `localhost:8080` | No (browser cannot reach your laptop) |
-| Go API / TypeScript shim | Not required for plagiarism; optional for Enhanced `/v1/check` |
+| Go API / TypeScript shim | Not required for plagiarism/rewrite; optional for full LT Enhanced |
 | Local LLM (MLX / llama.cpp) | No |
 | Browser extension | No — load unpacked or publish to Chrome Web Store |
 | VS Code / Tauri desktop | No — installable apps |
+
+## Groq LLM on Vercel (free cloud rewrite)
+
+The editor prefers same-origin `POST /api/rewrite` and `POST /api/check`. Those routes read **server-only** `LLM_*` env vars and call [Groq](https://console.groq.com)’s OpenAI-compatible API. You do **not** need Render or a Go API.
+
+### Exact env vars (Vercel dashboard)
+
+1. Open [vercel.com](https://vercel.com) → your project for this repo.
+2. Go to **Settings** → **Environment Variables**.
+3. Add (for **Production**, and Preview if you want):
+
+```
+LLM_API_KEY=gsk_...
+LLM_BASE_URL=https://api.groq.com/openai/v1
+LLM_MODEL=llama-3.1-8b-instant
+```
+
+4. Free signup: [console.groq.com](https://console.groq.com) → create an API key.
+5. **Do not** prefix with `NEXT_PUBLIC_` — the key must never ship to the browser.
+6. **Redeploy** after adding or changing vars.
+
+Without a key, `/api/rewrite` returns rule-based variants with `skippedReason`, and `/api/healthz` reports `llmAvailable: false`.
+
+### How to test Rewrite with Groq
+
+1. Deploy (or `npm run dev -w @check-grammar/web` with the same env in `.env.local`).
+2. Open the editor → confirm an **LLM · Groq** badge (from `GET /api/healthz`).
+3. Paste a sentence, select it (or place the caret in it) → **Rewrite**.
+4. You should get clarity / brevity / formality variants from Groq (`provider: "hosted"`).
+
+Privacy note: spelling/grammar can stay in-browser; rewrite and Enhanced-lite send text to Groq **only** when you use Rewrite or Enhanced mode with `includeLLM`.
 
 ## Plagiarism on Vercel (no Render)
 
@@ -65,9 +98,11 @@ Without a key, the route returns `200` with `skippedReason: "no provider configu
    - **Install Command:** `cd ../.. && npm install` (already in `apps/web/vercel.json`)  
    - **Build Command:** `cd ../.. && npm run build -w @check-grammar/web`  
    - **Output:** leave default (Next.js)  
-   - **Environment Variables:** none required for Privacy grammar. For plagiarism, add `PLAGIARISM_API_KEY` (server-only — see [Plagiarism on Vercel](#plagiarism-on-vercel-no-render))
+   - **Environment Variables:** none required for Privacy grammar. Optional:
+     - `PLAGIARISM_API_KEY` — plagiarism (see [Plagiarism on Vercel](#plagiarism-on-vercel-no-render))
+     - `LLM_API_KEY` (+ optional `LLM_BASE_URL`, `LLM_MODEL`) — Groq rewrite / Enhanced-lite (see [Groq LLM](#groq-llm-on-vercel-free-cloud-rewrite))
 4. Click **Deploy**.
-5. Open the `*.vercel.app` URL. Use **Privacy (in-browser)** — that is the default.
+5. Open the `*.vercel.app` URL. Use **Privacy (in-browser)** — that is the default. With `LLM_API_KEY`, Rewrite and Enhanced-lite use Groq via `/api/*`.
 
 CLI alternative (after `npm i -g vercel`):
 
@@ -84,6 +119,7 @@ Confirm Root Directory is `apps/web` when the CLI prompts.
 2. Type `This helllo is wrong.` → `helllo` should underline; Accept → `hello`.
 3. Confirm the banner still says spelling/grammar stay in the browser.
 4. With `PLAGIARISM_API_KEY` set: paste ≥100 characters → **Check plagiarism** → score/sources (or a clear skip/error). Without a key: UI explains how to configure Winston.
+5. With `LLM_API_KEY` set: select a sentence → **Rewrite** → clarity/brevity/formality from Groq; status bar shows **LLM · Groq**.
 
 ## Common failures
 
@@ -93,6 +129,7 @@ Confirm Root Directory is `apps/web` when the CLI prompts.
 | Missing wordlist / empty spelling | Commit `packages/engine/src/wordlist.generated.ts`; rebuild with `npm run wordlist -w @check-grammar/engine` if needed |
 | “Local API” mode errors on the live site | Expected — that mode needs a public API URL. Stay on Privacy, or set `NEXT_PUBLIC_API_URL` to a hosted shim/API you control |
 | Plagiarism says “no provider configured” | Add `PLAGIARISM_API_KEY` (not `NEXT_PUBLIC_`) → Redeploy |
+| Rewrite stays on rules / no Groq badge | Add `LLM_API_KEY` (and optional `LLM_BASE_URL` / `LLM_MODEL`) → Redeploy; probe `/api/healthz` |
 | Plagiarism times out on Hobby | Winston can be slow; Hobby function limit is short — retry or upgrade; `maxDuration` is set to 60s for Pro |
 | Function size / memory warnings | The dictionary blob is large but client-bundled; if build OOM’s on Hobby, contact Vercel or shrink the list |
 

@@ -17,7 +17,7 @@ import { loadPersonalDictionary, addToPersonalDictionary, savePersonalDictionary
 import { inferTone } from "../lib/tone";
 import { rewriteTarget } from "../lib/sentence";
 import { llmFromHealth } from "../lib/ollama";
-import { fetchRewrite, localRewrite, wordDiff, type RewriteGoal } from "../lib/rewrite";
+import { fetchRewrite, wordDiff, type RewriteGoal } from "../lib/rewrite";
 import type { RewriteVariant } from "@check-grammar/protocol";
 import {
   enhancedCheck,
@@ -110,7 +110,7 @@ export default function Editor() {
       const onLocalhost =
         typeof window !== "undefined" &&
         (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
-      const suggestEnhanced = HAS_API_ENV || onLocalhost;
+      const suggestEnhanced = HAS_API_ENV || onLocalhost || Boolean(llm?.available);
       if (suggestEnhanced && enhancedAvailable(caps)) {
         setMode((prev) => (prev === "privacy" ? "enhanced" : prev));
       }
@@ -434,14 +434,8 @@ export default function Editor() {
     setRewriteSpan({ offset: target.offset, length: target.length });
 
     try {
-      const useApi = mode === "local" || mode === "enhanced";
-      const out = useApi
-        ? await fetchRewrite(API, target.snippet, goalsActive, dialect)
-        : {
-            text: localRewrite(target.snippet, goalsActive),
-            provider: "rules",
-            variants: goalsActive.map((g) => ({ goal: g, text: localRewrite(target.snippet, [g]) })),
-          };
+      // Always try same-origin /api/rewrite (Vercel Groq) then Go API; falls back to rules.
+      const out = await fetchRewrite(API, target.snippet, goalsActive, dialect);
       const variants = out.variants?.length ? out.variants : [{ goal: goalsActive[0], text: out.text }];
       setRewriteVariants(variants);
       setRewriteVariantIdx(0);
@@ -576,9 +570,24 @@ export default function Editor() {
       {showCapabilityBanner && (
         <div className="enhanced-banner" role="status">
           <span>
-            Enhanced mode available — LanguageTool
-            {lt?.reachable ? " ✓" : lt?.configured ? " (starting…)" : ""} + local LLM
-            {llm?.available ? " ✓" : llm?.configured ? " (start Ollama or ml/serve)" : ""}. Checks run via <code>{API}</code>; Privacy mode stays in-browser only.
+            Enhanced mode available —
+            {lt ? (
+              <>
+                {" "}
+                LanguageTool
+                {lt.reachable ? " ✓" : lt.configured ? " (starting…)" : ""} +{" "}
+              </>
+            ) : null}
+            {llm?.backend === "groq" ? "Groq LLM" : "local LLM"}
+            {llm?.available ? " ✓" : llm?.configured ? " (start Ollama or set LLM_API_KEY)" : ""}.
+            {HAS_API_ENV ? (
+              <>
+                {" "}
+                Checks run via <code>{API}</code>; Privacy mode stays in-browser only.
+              </>
+            ) : (
+              <> Checks use same-origin <code>/api/check</code> on Vercel when available.</>
+            )}
           </span>
           <button type="button" className="banner-dismiss" onClick={() => setBannerDismissed(true)}>
             Dismiss
@@ -608,8 +617,10 @@ export default function Editor() {
                   Enhanced
                   {apiAvailable
                     ? llmAvailable
-                      ? ` (API + LLM${llmBackend === "ollama" ? " · Ollama" : ""})`
-                      : " (API — start Ollama for LLM)"
+                      ? ` (API + LLM${
+                          llmBackend === "ollama" ? " · Ollama" : llmBackend === "groq" ? " · Groq" : ""
+                        })`
+                      : " (API — start Ollama or set LLM_API_KEY)"
                     : " (start API first)"}
                 </option>
               </select>
@@ -766,10 +777,16 @@ export default function Editor() {
             tone={tone}
             onPick={pickWord}
             llm={
-              mode === "enhanced" && (llmAvailable || res?.llm?.used)
+              llmAvailable || (mode === "enhanced" && res?.llm?.used)
                 ? {
                     active: true,
-                    backend: llmBackend || (res?.llm?.provider === "ollama" ? "ollama" : res?.llm?.provider),
+                    backend:
+                      llmBackend ||
+                      (res?.llm?.provider === "ollama"
+                        ? "ollama"
+                        : res?.llm?.provider === "hosted"
+                          ? "groq"
+                          : res?.llm?.provider),
                     model: res?.llm?.model || llmModel,
                   }
                 : undefined

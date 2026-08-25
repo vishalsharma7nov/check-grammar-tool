@@ -76,6 +76,34 @@ export type RewriteResult = {
   variants: RewriteVariant[];
 };
 
+function parseRewriteBody(
+  body: {
+    text?: string;
+    provider?: string;
+    model?: string;
+    variants?: RewriteVariant[];
+    skippedReason?: string;
+  },
+  snippet: string,
+  goalsActive: RewriteGoal[],
+): RewriteResult | null {
+  const variants: RewriteVariant[] = Array.isArray(body.variants)
+    ? body.variants.filter((v) => v?.text?.trim())
+    : [];
+  const text = body.text?.trim() || variants[0]?.text?.trim() || "";
+  if (!text) return null;
+  return {
+    text,
+    provider: body.provider || "local",
+    model: body.model,
+    variants: variants.length ? variants : localRewriteVariants(snippet, goalsActive),
+  };
+}
+
+/**
+ * Prefer same-origin POST /api/rewrite (Vercel + Groq), then Go `${api}/v1/rewrite`,
+ * then local rule variants.
+ */
 export async function fetchRewrite(
   api: string,
   snippet: string,
@@ -83,34 +111,59 @@ export async function fetchRewrite(
   dialect: Dialect,
 ): Promise<RewriteResult> {
   const goalsActive = goals.length ? goals : (["clarity"] as RewriteGoal[]);
+  const payload = {
+    text: snippet,
+    instruction: rewriteInstruction(goalsActive),
+    dialect,
+    goals: goalsActive,
+  };
+
+  let sameOriginRules: RewriteResult | null = null;
+
   try {
-    const r = await fetchWithTimeout(`${api.replace(/\/$/, "")}/v1/rewrite`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        text: snippet,
-        instruction: rewriteInstruction(goalsActive),
-        dialect,
-      }),
-    });
+    const r = await fetchWithTimeout(
+      "/api/rewrite",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      },
+      60_000,
+    );
     if (r.ok) {
       const body = await r.json();
-      const variants: RewriteVariant[] = Array.isArray(body.variants)
-        ? body.variants.filter((v: RewriteVariant) => v?.text?.trim())
-        : [];
-      const text = body.text?.trim() || variants[0]?.text?.trim() || "";
-      if (text) {
-        return {
-          text,
-          provider: body.provider || "local",
-          model: body.model,
-          variants: variants.length ? variants : localRewriteVariants(snippet, goalsActive),
-        };
-      }
+      const parsed = parseRewriteBody(body, snippet, goalsActive);
+      // Prefer hosted/Groq when configured; keep rules response as fallback after Go API.
+      if (parsed && body.provider && body.provider !== "rules") return parsed;
+      if (parsed && !body.skippedReason) return parsed;
+      sameOriginRules = parsed;
     }
   } catch {
-    /* fall through to local rules */
+    /* try Go API */
   }
+
+  const base = api.replace(/\/$/, "");
+  if (base) {
+    try {
+      const r = await fetchWithTimeout(`${base}/v1/rewrite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: snippet,
+          instruction: rewriteInstruction(goalsActive),
+          dialect,
+        }),
+      });
+      if (r.ok) {
+        const parsed = parseRewriteBody(await r.json(), snippet, goalsActive);
+        if (parsed) return parsed;
+      }
+    } catch {
+      /* fall through */
+    }
+  }
+
+  if (sameOriginRules) return sameOriginRules;
   const variants = localRewriteVariants(snippet, goalsActive);
   return { text: variants[0]?.text ?? snippet, provider: "rules", variants };
 }

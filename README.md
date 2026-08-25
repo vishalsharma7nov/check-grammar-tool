@@ -65,7 +65,7 @@ When `LANGUAGETOOL_URL` is set, `/v1/check` merges LanguageTool matches with the
 
 **Check plagiarism** in the editor compares your text against published web sources and links each match so you can **cite it** — it detects overlap, it never helps hide it. Text is sent only when you click the button (opt-in).
 
-**Vercel (no Render required):** set `PLAGIARISM_API_KEY` in the Vercel project env (server-side, **not** `NEXT_PUBLIC_`). The web app calls same-origin `POST /api/plagiarism`. See [docs/vercel.md](docs/vercel.md).
+**Vercel (no Render required):** set `PLAGIARISM_API_KEY` in the Vercel project env (server-side, **not** `NEXT_PUBLIC_`). The web app calls same-origin `POST /api/plagiarism`. For free cloud rewrite, also set `LLM_API_KEY` (Groq). See [docs/vercel.md](docs/vercel.md).
 
 **Local Go API:**
 
@@ -92,13 +92,23 @@ Chrome → `chrome://extensions` → Load unpacked → `apps/extension`. Then ty
 
 Deploy the **web editor only** (Privacy mode) for free. Full steps and requirements: [docs/vercel.md](docs/vercel.md).
 
-**Checklist:** GitHub repo · Vercel account · Node 20 · Root Directory = `apps/web` · commit `packages/engine/src/wordlist.generated.ts` · no env vars needed for grammar; optional `PLAGIARISM_API_KEY` for plagiarism (server-side only).
+**Checklist:** GitHub repo · Vercel account · Node 20 · Root Directory = `apps/web` · commit `packages/engine/src/wordlist.generated.ts` · no env vars needed for grammar; optional `PLAGIARISM_API_KEY` (plagiarism) and `LLM_API_KEY` (Groq rewrite) — both **server-side only**.
 
-**Quick steps:** Import the repo on [vercel.com/new](https://vercel.com/new) → set Root Directory to `apps/web` → Deploy. Use **Privacy (in-browser)** on the live site. For plagiarism without Render, set `PLAGIARISM_API_KEY` in Vercel env and redeploy.
+**Quick steps:** Import the repo on [vercel.com/new](https://vercel.com/new) → set Root Directory to `apps/web` → Deploy. Use **Privacy (in-browser)** on the live site. For plagiarism without Render, set `PLAGIARISM_API_KEY`. For free cloud rewrite, set Groq vars (see below) and redeploy.
+
+**Groq (free cloud LLM on Vercel, no Render):**
+
+```
+LLM_API_KEY=gsk_...
+LLM_BASE_URL=https://api.groq.com/openai/v1
+LLM_MODEL=llama-3.1-8b-instant
+```
+
+Signup: [console.groq.com](https://console.groq.com). Same-origin routes: `POST /api/rewrite`, `POST /api/check`, `GET /api/healthz`. Details: [docs/vercel.md](docs/vercel.md).
 
 | On Vercel | Not on Vercel |
 | --- | --- |
-| Editor, spelling, grammar, next-word (in browser) | Go API, local LLM, extension store, desktop/Notes overlay |
+| Editor, spelling, grammar, next-word (in browser); optional Groq rewrite + plagiarism | Go API, local Ollama, extension store, desktop/Notes overlay |
 
 ## Deploy Enhanced mode for free
 
