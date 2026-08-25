@@ -2,6 +2,8 @@
 
 Host the **Go API + TypeScript rule engine** on a free/cheap cloud service, connect the **Vercel web editor**, and optionally add **LanguageTool** for Enhanced grammar. No paid LLM APIs required.
 
+**Bring-your-own keys:** copy the same variable names from [`.env.example`](../.env.example) / [`.env.production.example`](./.env.production.example) into Render, Fly, Railway, or Docker. Full table and signup links (Groq, Winston, Ollama) → [README.md → Configuration](../README.md#configuration-bring-your-own-keys).
+
 This project is **not** affiliated with Grammarly.
 
 ## Parity vs Grammarly (realistic)

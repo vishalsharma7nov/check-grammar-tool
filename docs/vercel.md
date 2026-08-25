@@ -2,6 +2,8 @@
 
 The public demo is the **Next.js editor in Privacy mode**. Spelling and grammar run **in the visitor’s browser** via `@check-grammar/engine`. You do **not** need the Go API, Docker, or a GPU on Vercel.
 
+**Bring-your-own keys:** full env var table, signup links (Groq, Winston, Ollama), and how to reuse the same names on any host → [README.md → Configuration](../README.md#configuration-bring-your-own-keys). Templates: [`.env.example`](../.env.example), [`deploy/.env.production.example`](../deploy/.env.production.example).
+
 This project is **not** affiliated with Grammarly.
 
 ## Requirements checklist
