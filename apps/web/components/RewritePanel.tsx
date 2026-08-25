@@ -22,6 +22,7 @@ type Props = {
   provider: string;
   loading: boolean;
   error: string;
+  warning?: string;
   onAccept: () => void;
   onClose: () => void;
 };
@@ -37,6 +38,7 @@ export default function RewritePanel({
   provider,
   loading,
   error,
+  warning = "",
   onAccept,
   onClose,
 }: Props) {
@@ -55,10 +57,12 @@ export default function RewritePanel({
       </div>
       {loading ? (
         <p className="rw-status">Rewriting…</p>
-      ) : error ? (
+      ) : error && !suggested ? (
         <p className="rw-status rw-err">{error}</p>
       ) : (
         <>
+          {error ? <p className="rw-status rw-err">{error}</p> : null}
+          {warning && !error ? <p className="rw-status rw-warn">{warning}</p> : null}
           {showVariants ? (
             <div className="rw-variant-tabs" role="tablist" aria-label="Rewrite variants">
               {variants.map((v, i) => (
@@ -87,7 +91,7 @@ export default function RewritePanel({
           </div>
           <p className="rw-meta">via {provider}</p>
           {unchanged ? (
-            <p className="rw-status">No changes suggested for this text with the selected goals. Try another goal or edit the sentence.</p>
+            <p className="rw-status">No changes suggested for this text with the selected goals. Try another goal, select a phrase with filler wording, or enable Groq (LLM_API_KEY) for stronger rewrites.</p>
           ) : null}
           <div className="sg-pop-actions">
             <button type="button" className="primary" onClick={onAccept} disabled={!suggested || suggested === original}>

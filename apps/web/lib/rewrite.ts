@@ -1,5 +1,5 @@
 import type { Dialect, RewriteVariant } from "@check-grammar/protocol";
-import { fetchWithTimeout } from "./fetchTimeout";
+import { fetchWithTimeout } from "./fetchTimeout.ts";
 
 export type RewriteGoal = "clarity" | "brevity" | "formality";
 
@@ -7,12 +7,27 @@ const WORDY: [RegExp, string][] = [
   [/\bin order to\b/gi, "to"],
   [/\bdue to the fact that\b/gi, "because"],
   [/\bat this point in time\b/gi, "now"],
+  [/\bat the present time\b/gi, "now"],
   [/\bfor the purpose of\b/gi, "to"],
   [/\bwith regard to\b/gi, "about"],
+  [/\bwith respect to\b/gi, "about"],
   [/\bin the event that\b/gi, "if"],
   [/\bhas the ability to\b/gi, "can"],
   [/\bmake a decision\b/gi, "decide"],
   [/\btake into consideration\b/gi, "consider"],
+  [/\bprior to\b/gi, "before"],
+  [/\bin spite of\b/gi, "despite"],
+  [/\ba large number of\b/gi, "many"],
+  [/\ba number of\b/gi, "several"],
+  [/\bin the near future\b/gi, "soon"],
+  [/\bon a daily basis\b/gi, "daily"],
+  [/\bwith the exception of\b/gi, "except"],
+  [/\bin light of\b/gi, "given"],
+  [/\bas a matter of fact\b/gi, ""],
+  [/\bit is important to note that\b/gi, ""],
+  [/\bneedless to say\b/gi, ""],
+  [/\brevert back\b/gi, "reply"],
+  [/\bkindly revert\b/gi, "please reply"],
 ];
 
 const BRIEF: [RegExp, string][] = [
@@ -22,6 +37,9 @@ const BRIEF: [RegExp, string][] = [
   [/\bbasically\b/gi, ""],
   [/\bin my opinion\b/gi, ""],
   [/\bI think that\b/gi, ""],
+  [/\bplease be advised that\b/gi, ""],
+  [/\bkindly\b/gi, ""],
+  [/\bin order to\b/gi, "to"],
 ];
 
 const CONTRACTIONS: [RegExp, string][] = [
@@ -35,6 +53,13 @@ const CONTRACTIONS: [RegExp, string][] = [
   [/\byou're\b/gi, "you are"],
   [/\bI've\b/gi, "I have"],
   [/\bwe've\b/gi, "we have"],
+  [/\bisn't\b/gi, "is not"],
+  [/\baren't\b/gi, "are not"],
+  [/\bwasn't\b/gi, "was not"],
+  [/\bweren't\b/gi, "were not"],
+  [/\bhasn't\b/gi, "has not"],
+  [/\bhaven't\b/gi, "have not"],
+  [/\bdidn't\b/gi, "did not"],
 ];
 
 function applyRules(text: string, rules: [RegExp, string][]): string {
@@ -74,7 +99,19 @@ export type RewriteResult = {
   provider: string;
   model?: string;
   variants: RewriteVariant[];
+  /** Soft failure note — result still usable (usually local rules). */
+  warning?: string;
 };
+
+function rulesResult(snippet: string, goalsActive: RewriteGoal[], warning?: string): RewriteResult {
+  const variants = localRewriteVariants(snippet, goalsActive);
+  return {
+    text: variants[0]?.text ?? snippet,
+    provider: "rules",
+    variants,
+    warning,
+  };
+}
 
 function parseRewriteBody(
   body: {
@@ -83,6 +120,7 @@ function parseRewriteBody(
     model?: string;
     variants?: RewriteVariant[];
     skippedReason?: string;
+    error?: string;
   },
   snippet: string,
   goalsActive: RewriteGoal[],
@@ -97,20 +135,41 @@ function parseRewriteBody(
     provider: body.provider || "local",
     model: body.model,
     variants: variants.length ? variants : localRewriteVariants(snippet, goalsActive),
+    warning: body.skippedReason || body.error,
   };
 }
 
+async function readJson(r: Response): Promise<Record<string, unknown> | null> {
+  try {
+    return (await r.json()) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+export type FetchRewriteOptions = {
+  /** Privacy mode: never call the network; local rules only. */
+  localOnly?: boolean;
+};
+
 /**
  * Prefer same-origin POST /api/rewrite (Vercel + Groq), then Go `${api}/v1/rewrite`,
- * then local rule variants.
+ * then local rule variants. Always returns a usable result (rules at minimum).
  */
 export async function fetchRewrite(
   api: string,
   snippet: string,
   goals: RewriteGoal[],
   dialect: Dialect,
+  opts?: FetchRewriteOptions,
 ): Promise<RewriteResult> {
   const goalsActive = goals.length ? goals : (["clarity"] as RewriteGoal[]);
+  const fallback = () => rulesResult(snippet, goalsActive);
+
+  if (opts?.localOnly) {
+    return fallback();
+  }
+
   const payload = {
     text: snippet,
     instruction: rewriteInstruction(goalsActive),
@@ -118,7 +177,7 @@ export async function fetchRewrite(
     goals: goalsActive,
   };
 
-  let sameOriginRules: RewriteResult | null = null;
+  const warnings: string[] = [];
 
   try {
     const r = await fetchWithTimeout(
@@ -128,44 +187,99 @@ export async function fetchRewrite(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       },
-      60_000,
+      25_000,
     );
     if (r.ok) {
-      const body = await r.json();
-      const parsed = parseRewriteBody(body, snippet, goalsActive);
-      // Prefer hosted/Groq when configured; keep rules response as fallback after Go API.
-      if (parsed && body.provider && body.provider !== "rules") return parsed;
-      if (parsed && !body.skippedReason) return parsed;
-      sameOriginRules = parsed;
+      const body = await readJson(r);
+      if (body) {
+        const parsed = parseRewriteBody(
+          body as Parameters<typeof parseRewriteBody>[0],
+          snippet,
+          goalsActive,
+        );
+        if (parsed) {
+          // Hosted/Groq — use immediately.
+          if (parsed.provider && parsed.provider !== "rules") {
+            return parsed;
+          }
+          // Same-origin already gave rules (no key / LLM skip) — do not wait on Go API.
+          return {
+            ...parsed,
+            warning:
+              parsed.warning ||
+              (typeof body.skippedReason === "string" ? body.skippedReason : undefined),
+          };
+        }
+      }
+      warnings.push("Rewrite API returned an empty response.");
+    } else if (r.status === 404) {
+      warnings.push("Rewrite API not deployed (404).");
+    } else {
+      const body = await readJson(r);
+      const err =
+        body && typeof body.error === "string" ? body.error : `Rewrite API failed (${r.status})`;
+      warnings.push(err);
     }
-  } catch {
-    /* try Go API */
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    warnings.push(
+      msg.includes("abort") || msg.includes("Timeout")
+        ? "Rewrite API timed out."
+        : `Rewrite API unreachable (${msg}).`,
+    );
   }
 
   const base = api.replace(/\/$/, "");
-  if (base) {
+  // Skip probing default localhost when the page is not on localhost (e.g. Vercel).
+  const onLocalhost =
+    typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+  const looksLikeLocalDefault = /localhost|127\.0\.0\.1/.test(base);
+  const shouldTryGo = Boolean(base) && (onLocalhost || !looksLikeLocalDefault);
+
+  if (shouldTryGo) {
     try {
-      const r = await fetchWithTimeout(`${base}/v1/rewrite`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: snippet,
-          instruction: rewriteInstruction(goalsActive),
-          dialect,
-        }),
-      });
+      const r = await fetchWithTimeout(
+        `${base}/v1/rewrite`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: snippet,
+            instruction: rewriteInstruction(goalsActive),
+            dialect,
+          }),
+        },
+        8_000,
+      );
       if (r.ok) {
-        const parsed = parseRewriteBody(await r.json(), snippet, goalsActive);
-        if (parsed) return parsed;
+        const body = await readJson(r);
+        if (body) {
+          const parsed = parseRewriteBody(
+            body as Parameters<typeof parseRewriteBody>[0],
+            snippet,
+            goalsActive,
+          );
+          if (parsed) {
+            return {
+              ...parsed,
+              warning: warnings.length ? warnings.join(" ") : parsed.warning,
+            };
+          }
+        }
+      } else {
+        warnings.push(`Go rewrite API failed (${r.status}).`);
       }
     } catch {
-      /* fall through */
+      warnings.push("Go rewrite API unreachable.");
     }
   }
 
-  if (sameOriginRules) return sameOriginRules;
-  const variants = localRewriteVariants(snippet, goalsActive);
-  return { text: variants[0]?.text ?? snippet, provider: "rules", variants };
+  const local = fallback();
+  return {
+    ...local,
+    warning: [...warnings, "Using on-device rewrite rules."].filter(Boolean).join(" "),
+  };
 }
 
 /** Simple word-level diff segments for side-by-side display. */

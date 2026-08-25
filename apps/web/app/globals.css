@@ -932,6 +932,7 @@ textarea.doc::selection {
 .rw-meta { font-size: var(--text-xs); color: var(--muted); margin: var(--space-3) 0; }
 .rw-status { font-size: var(--text-sm); color: var(--muted); margin: var(--space-3) 0; }
 .rw-err { color: var(--spell); }
+.rw-warn { color: var(--muted); }
 
 /* ── AI Write (draft from context) ─────────────────────────────── */
 .aiw-panel {

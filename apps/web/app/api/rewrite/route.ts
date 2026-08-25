@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { Dialect, RewriteGoal } from "@check-grammar/protocol";
 import { rewriteWithLlm } from "../../../lib/llmServer";
+import { localRewriteVariants } from "../../../lib/rewrite";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -8,6 +9,7 @@ export const maxDuration = 60;
 /**
  * POST /api/rewrite — Groq (or OpenAI-compatible) rewrite via LLM_* env vars.
  * Missing LLM_API_KEY → 200 with rule-based variants + skippedReason.
+ * Unexpected failures → 200 with rules + skippedReason (never leave the client empty).
  */
 export async function POST(req: Request) {
   let text = "";
@@ -50,6 +52,13 @@ export async function POST(req: Request) {
     return NextResponse.json(result);
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    return NextResponse.json({ error: message }, { status: 502 });
+    const active = goals?.length ? goals : (["clarity"] as RewriteGoal[]);
+    const variants = localRewriteVariants(text, active);
+    return NextResponse.json({
+      text: variants[0]?.text ?? text,
+      provider: "rules",
+      variants,
+      skippedReason: message,
+    });
   }
 }

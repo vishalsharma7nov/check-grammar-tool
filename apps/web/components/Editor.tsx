@@ -66,6 +66,7 @@ export default function Editor() {
   const [rewriteOpen, setRewriteOpen] = useState(false);
   const [rewriteLoading, setRewriteLoading] = useState(false);
   const [rewriteError, setRewriteError] = useState("");
+  const [rewriteWarning, setRewriteWarning] = useState("");
   const [rewriteOriginal, setRewriteOriginal] = useState("");
   const [rewriteSuggested, setRewriteSuggested] = useState("");
   const [rewriteProvider, setRewriteProvider] = useState("");
@@ -422,6 +423,7 @@ export default function Editor() {
     const target = rewriteTarget(text, start, end);
     if (!target) {
       setRewriteError("Select text or place the caret in a sentence.");
+      setRewriteWarning("");
       setRewriteOpen(true);
       return;
     }
@@ -429,6 +431,7 @@ export default function Editor() {
     setRewriteOpen(true);
     setRewriteLoading(true);
     setRewriteError("");
+    setRewriteWarning("");
     setRewriteOriginal(target.snippet);
     setRewriteSuggested("");
     setRewriteVariants([]);
@@ -436,15 +439,22 @@ export default function Editor() {
     setRewriteSpan({ offset: target.offset, length: target.length });
 
     try {
-      // Always try same-origin /api/rewrite (Vercel Groq) then Go API; falls back to rules.
-      const out = await fetchRewrite(API, target.snippet, goalsActive, dialect);
+      // Privacy: on-device rules only. Otherwise /api/rewrite (Groq) → Go API → rules.
+      const out = await fetchRewrite(API, target.snippet, goalsActive, dialect, {
+        localOnly: mode === "privacy",
+      });
       const variants = out.variants?.length ? out.variants : [{ goal: goalsActive[0], text: out.text }];
+      const suggested = variants[0]?.text ?? out.text;
       setRewriteVariants(variants);
       setRewriteVariantIdx(0);
-      setRewriteSuggested(variants[0]?.text ?? out.text);
+      setRewriteSuggested(suggested);
       setRewriteProvider(out.provider);
+      if (out.warning) setRewriteWarning(out.warning);
+      if (!suggested.trim()) {
+        setRewriteError("Rewrite produced no text. Try a different selection or goal.");
+      }
     } catch (e) {
-      setRewriteError(String(e));
+      setRewriteError(`Rewrite failed: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setRewriteLoading(false);
     }
@@ -973,6 +983,7 @@ export default function Editor() {
           onSelectVariant={selectRewriteVariant}
           loading={rewriteLoading}
           error={rewriteError}
+          warning={rewriteWarning}
           onAccept={acceptRewrite}
           onClose={() => setRewriteOpen(false)}
         />

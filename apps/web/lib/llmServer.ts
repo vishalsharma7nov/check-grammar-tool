@@ -172,37 +172,51 @@ export async function rewriteWithLlm(
     };
   }
 
-  // Match Go client: when LLM is up, always emit clarity / brevity / formality.
+  // Match Go client: when LLM is up, emit clarity / brevity / formality — in parallel
+  // so Vercel maxDuration (60s) is not blown by three sequential 45s calls.
   const allGoals: RewriteGoal[] = ["clarity", "brevity", "formality"];
-  const variants: RewriteVariant[] = [];
-  let usedModel = env.model;
   const singleGoal = goals.length === 1 ? goals[0] : null;
+  let usedModel = env.model;
+  let anyLlmOk = false;
+  const llmErrors: string[] = [];
 
-  for (const goal of allGoals) {
-    const prompt =
-      singleGoal === goal && instruction?.trim() ? instruction.trim() : rewriteGoalPrompt(goal);
-    try {
-      const { content, model } = await chatCompletion(
-        env,
-        REWRITE_SYSTEM,
-        `${prompt}\nDialect: ${dialect}\n\n---\n${text}`,
-      );
-      usedModel = model;
-      if (validateVariant(text, content)) {
-        variants.push({ goal, text: content });
-      } else {
+  const settled = await Promise.all(
+    allGoals.map(async (goal) => {
+      const prompt =
+        singleGoal === goal && instruction?.trim() ? instruction.trim() : rewriteGoalPrompt(goal);
+      try {
+        const { content, model } = await chatCompletion(
+          env,
+          REWRITE_SYSTEM,
+          `${prompt}\nDialect: ${dialect}\n\n---\n${text}`,
+          { timeoutMs: 20_000 },
+        );
+        usedModel = model;
+        anyLlmOk = true;
+        if (validateVariant(text, content)) {
+          return { goal, text: content } satisfies RewriteVariant;
+        }
         const fallback = localRewriteVariants(text, [goal])[0];
-        if (fallback && fallback.text !== text) variants.push(fallback);
+        return fallback ?? { goal, text };
+      } catch (e) {
+        llmErrors.push(e instanceof Error ? e.message : String(e));
+        const fallback = localRewriteVariants(text, [goal])[0];
+        return fallback ?? { goal, text };
       }
-    } catch {
-      const fallback = localRewriteVariants(text, [goal])[0];
-      if (fallback) variants.push(fallback);
-    }
-  }
+    }),
+  );
+
+  const variants = settled.filter((v) => Boolean(v?.text?.trim()));
 
   if (!variants.length) {
     const rules = localRewriteVariants(text, goals.length ? goals : (["clarity"] as RewriteGoal[]));
-    return { text: rules[0]?.text ?? text, provider: "rules", model: usedModel, variants: rules };
+    return {
+      text: rules[0]?.text ?? text,
+      provider: "rules",
+      model: usedModel,
+      variants: rules,
+      skippedReason: llmErrors[0] || "LLM returned no usable variants",
+    };
   }
 
   const preferred = [...variants].sort((a, b) => {
@@ -210,6 +224,16 @@ export async function rewriteWithLlm(
     const bi = goals.indexOf(b.goal);
     return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
   });
+
+  if (!anyLlmOk) {
+    return {
+      text: preferred[0].text,
+      provider: "rules",
+      model: usedModel,
+      variants: preferred,
+      skippedReason: llmErrors[0] || "LLM unavailable — used on-device rules",
+    };
+  }
 
   return {
     text: preferred[0].text,
