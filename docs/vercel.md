@@ -30,6 +30,7 @@ Optional later (not required for the free demo):
 | Suggestion popup / underlines as you type | Yes |
 | Plagiarism check (`POST /api/plagiarism`) | Yes — set `PLAGIARISM_API_KEY` (see below) |
 | Cloud rewrite via Groq (`POST /api/rewrite`) | Yes — set `LLM_API_KEY` (see [Groq LLM](#groq-llm-on-vercel-free-cloud-rewrite)) |
+| AI Write / draft from context (`POST /api/generate`) | Yes — same `LLM_API_KEY` (original drafts; not plagiarism) |
 | Enhanced-lite check (`POST /api/check`) | Yes — engine in Node + optional Groq augment |
 | Local API mode pointing at `localhost:8080` | No (browser cannot reach your laptop) |
 | Go API / TypeScript shim | Not required for plagiarism/rewrite; optional for full LT Enhanced |
@@ -40,6 +41,8 @@ Optional later (not required for the free demo):
 ## Groq LLM on Vercel (free cloud rewrite)
 
 The editor prefers same-origin `POST /api/rewrite` and `POST /api/check`. Those routes read **server-only** `LLM_*` env vars and call [Groq](https://console.groq.com)’s OpenAI-compatible API. You do **not** need Render or a Go API.
+
+**AI Write** (`POST /api/generate`) uses the same `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL` to draft **original** text from a topic or brief (100–2000 words). It is a writing assistant — **not** a plagiarism checker. Without a key, `/api/generate` returns **503** with a message to set the env on Vercel.
 
 ### Exact env vars (Vercel dashboard)
 
@@ -57,7 +60,7 @@ LLM_MODEL=llama-3.1-8b-instant
 5. **Do not** prefix with `NEXT_PUBLIC_` — the key must never ship to the browser.
 6. **Redeploy** after adding or changing vars.
 
-Without a key, `/api/rewrite` returns rule-based variants with `skippedReason`, and `/api/healthz` reports `llmAvailable: false`.
+Without a key, `/api/rewrite` returns rule-based variants with `skippedReason`, `/api/generate` returns 503, and `/api/healthz` reports `llmAvailable: false`.
 
 ### How to test Rewrite with Groq
 
@@ -66,7 +69,14 @@ Without a key, `/api/rewrite` returns rule-based variants with `skippedReason`, 
 3. Paste a sentence, select it (or place the caret in it) → **Rewrite**.
 4. You should get clarity / brevity / formality variants from Groq (`provider: "hosted"`).
 
-Privacy note: spelling/grammar can stay in-browser; rewrite and Enhanced-lite send text to Groq **only** when you use Rewrite or Enhanced mode with `includeLLM`.
+### How to test AI Write (draft from context)
+
+1. Same env as Rewrite (`LLM_API_KEY` required).
+2. Editor toolbar → **AI Write** (next to Rewrite).
+3. Enter a brief (topic, audience, key points) → choose **100** / **500** / **Custom** (≥100) → **Generate draft**.
+4. **Insert into editor** or **Replace editor**, then grammar recheck runs as usual.
+
+Privacy note: spelling/grammar can stay in-browser; rewrite, AI Write, and Enhanced-lite send text to Groq **only** when you use those actions or Enhanced mode with `includeLLM`.
 
 ## Plagiarism on Vercel (no Render)
 

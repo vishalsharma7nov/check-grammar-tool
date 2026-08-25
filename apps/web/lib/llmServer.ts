@@ -219,6 +219,57 @@ export async function rewriteWithLlm(
   };
 }
 
+const GENERATE_SYSTEM = `You are Check Grammar's AI writing assistant.
+
+Write ORIGINAL content from the user's brief. Do not copy or closely paraphrase published sources.
+Return ONLY the draft text — no title labels, markdown fences, word-count notes, or preamble.
+Aim for approximately the requested word count. Use natural paragraphs.`;
+
+function countWords(s: string): number {
+  const m = s.trim().match(/\S+/g);
+  return m ? m.length : 0;
+}
+
+/** Original draft from context via Groq / OpenAI-compatible chat. */
+export async function generateWithLlm(
+  context: string,
+  wordCount: number,
+  dialect: Dialect,
+): Promise<
+  | { text: string; wordCount: number; provider: string; model: string }
+  | { error: string; status: number }
+> {
+  const env = llmEnv();
+  if (!llmConfigured(env)) {
+    return {
+      error:
+        "LLM_API_KEY is not set. Add it in Vercel → Project → Settings → Environment Variables (see docs/vercel.md), then redeploy.",
+      status: 503,
+    };
+  }
+  const brief = context.trim();
+  try {
+    const { content, model } = await chatCompletion(
+      env,
+      GENERATE_SYSTEM,
+      `Dialect: ${dialect}\nTarget length: about ${wordCount} words (minimum ${Math.min(wordCount, 100)}).\n\nWriting brief:\n${brief}`,
+      { temperature: 0.7, timeoutMs: 90_000 },
+    );
+    const text = stripFence(content).trim();
+    if (!text) {
+      return { error: "model returned empty draft", status: 502 };
+    }
+    return {
+      text,
+      wordCount: countWords(text),
+      provider: "hosted",
+      model,
+    };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : String(e), status: 502 };
+  }
+}
+
 export async function grammarCorrectWithLlm(
   text: string,
   dialect: Dialect,

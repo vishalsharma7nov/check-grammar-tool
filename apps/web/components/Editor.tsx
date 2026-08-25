@@ -27,6 +27,7 @@ import {
 } from "../lib/enhancedCheck";
 import { applyAllCorrections, copyToClipboard, downloadText } from "../lib/exportCorrected";
 import PlagiarismPanel from "./PlagiarismPanel";
+import WriteFromContext from "./WriteFromContext";
 import { checkPlagiarism, PLAGIARISM_OPT_IN_MESSAGE } from "../lib/plagiarism";
 import type { PlagiarismResult } from "@check-grammar/protocol";
 import { DEMO_TEXT, hasSeenOnboarding, markOnboardingSeen } from "../lib/onboarding";
@@ -76,6 +77,7 @@ export default function Editor() {
   const [plagError, setPlagError] = useState("");
   const [plagModeNote, setPlagModeNote] = useState("");
   const [plagResult, setPlagResult] = useState<PlagiarismResult | null>(null);
+  const [aiWriteOpen, setAiWriteOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [exportNote, setExportNote] = useState("");
   const [checking, setChecking] = useState(false);
@@ -470,6 +472,31 @@ export default function Editor() {
     setRewriteSuggested(v.text);
   }
 
+  function insertAiDraft(draft: string, mode: "append" | "replace") {
+    const trimmed = draft.trim();
+    if (!trimmed) return;
+    const next =
+      mode === "replace" || !text.trim()
+        ? trimmed
+        : `${text.replace(/\s+$/, "")}\n\n${trimmed}`;
+    const cursor = next.length;
+    setText(next);
+    caretRef.current = cursor;
+    selRef.current = { start: cursor, end: cursor };
+    setCaret(cursor);
+    setAiWriteOpen(false);
+    setDismissed(new Set());
+    setOpen(null);
+    setRecheckFlash("Draft inserted — rechecking…");
+    window.setTimeout(() => setRecheckFlash(""), 2500);
+    requestAnimationFrame(() => {
+      const ta = taRef.current;
+      if (!ta) return;
+      ta.focus();
+      ta.setSelectionRange(cursor, cursor);
+    });
+  }
+
   function acceptRewrite() {
     if (!rewriteSpan || !rewriteSuggested || rewriteSuggested === rewriteOriginal) return;
     const next = applyReplacement(text, rewriteSpan.offset, rewriteSpan.length, rewriteSuggested);
@@ -529,6 +556,7 @@ export default function Editor() {
         closePopup();
         setRewriteOpen(false);
         setPlagOpen(false);
+        setAiWriteOpen(false);
       }
     };
     const onDown = (e: MouseEvent) => {
@@ -679,6 +707,14 @@ export default function Editor() {
             </span>
             <button type="button" className="secondary" onClick={handleRewrite} disabled={!text.trim()}>
               Rewrite
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => setAiWriteOpen(true)}
+              title="Generate an original draft from a topic or brief (AI writing assistant)"
+            >
+              AI Write
             </button>
           </div>
           <div className="toolbar-divider" aria-hidden />
@@ -941,6 +977,12 @@ export default function Editor() {
           onClose={() => setRewriteOpen(false)}
         />
       )}
+      <WriteFromContext
+        dialect={dialect}
+        open={aiWriteOpen}
+        onClose={() => setAiWriteOpen(false)}
+        onInsert={insertAiDraft}
+      />
     </div>
   );
 }
