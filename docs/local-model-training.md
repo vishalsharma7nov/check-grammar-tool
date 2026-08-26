@@ -42,14 +42,19 @@ Clean: strip tracking URLs, ads, “subscribe” footers. Keep citations honest 
 
 ### A0. Ready-made local writer (this repo)
 
-On Apple Silicon, the fastest path is an Ollama **Modelfile** (system prompt + few-shots), not a full LoRA:
+On Apple Silicon:
+
+1. Build open human JSONL (Project Gutenberg PD + corpus seed): `node ml/writer-train/build-open-human-data.mjs`
+2. Create Ollama **`check-grammar-writer`** from the expanded Modelfile (SYSTEM + blog + PD few-shots)
+3. Optional: tiny **MLX LoRA** on 4-bit Llama 3.2 3B (`ml/writer-train/try-mlx-lora.sh`) — fits ~8GB RAM with batch 1; adapters stay local; app still uses Ollama
 
 ```bash
 brew install ollama && brew services start ollama
+node ml/writer-train/build-open-human-data.mjs --max 1500
 ./ml/writer-train/create-ollama-model.sh
 ```
 
-That creates **`check-grammar-writer`** from `llama3.2:3b` with natural-prose instructions aligned to Writer Studio. Dataset scaffold for a later LoRA: `ml/writer-train/data/natural_writing.jsonl`. Details: [`ml/writer-train/README.md`](../ml/writer-train/README.md).
+Datasets: `data/open_human_english.jsonl`, `data/natural_writing_merged.jsonl`. Details: [`ml/writer-train/README.md`](../ml/writer-train/README.md).
 
 ```bash
 LLM_BASE_URL=http://127.0.0.1:11434/v1

@@ -1,27 +1,58 @@
-# Local natural-writing model (Ollama)
+# Local natural-writing model (Ollama + optional MLX LoRA)
 
-Small Mac-friendly path for Writer Studio / AI Write: an Ollama model with Check Grammar’s
-**natural prose** system prompt and a few hand-written examples baked in.
+Mac-friendly path for Writer Studio / AI Write: train on **open human English**
+(Project Gutenberg PD + corpus seed), then serve as Ollama model
+**`check-grammar-writer`**.
 
-**Ethics:** train and prompt for natural rhythm and concrete clarity only — **not** AI-detector
-evasion, Quillbot/GPTZero chasing, or “undetectable” text.
+**Ethics:** natural rhythm and concrete clarity only — **not** AI-detector evasion,
+Quillbot/GPTZero chasing, or “undetectable” text. No copyrighted scrapes.
 
 ## What’s here
 
 | Path | Purpose |
 | --- | --- |
-| `Modelfile` | Builds `check-grammar-writer` from `llama3.2:3b` + SYSTEM + few-shots |
-| `data/natural_writing.jsonl` | 61 instruction→output samples (fashion, lifestyle, how-to) for later LoRA |
-| `create-ollama-model.sh` | Pull base + `ollama create` |
+| `build-open-human-data.mjs` | Download curated Gutenberg texts → JSONL instruction pairs |
+| `data/open_human_english.jsonl` | ~1100+ PD/CC human paragraphs (rebuilt by script) |
+| `data/natural_writing.jsonl` | 61 hand-written fashion/lifestyle scaffolds |
+| `data/natural_writing_merged.jsonl` | Scaffold + open human (LoRA / archive) |
+| `data/open_human_sources.json` | Book list + licenses + counts |
+| `Modelfile` | SYSTEM + modern blog few-shots + PD prose few-shots → Ollama |
+| `create-ollama-model.sh` | Pull base + `ollama create check-grammar-writer` |
+| `try-mlx-lora.sh` | Best-effort tiny MLX LoRA (works on ~8GB with 4bit + batch 1) |
+| `adapters/open-human-lora/` | Small LoRA adapters from a successful local run (~13MB) |
 
-Model **weights are not in git**. Ollama stores them under `~/.ollama`.
+Base weights live under `~/.ollama` and Hugging Face cache — **not** in git.
+Gutenberg raw cache: `data/gutenberg-cache/` (gitignored).
 
-## Quick start (this Mac)
+## Data used (this Mac run)
+
+- **Project Gutenberg** (public domain): ~23 classic books truncated (~176KB each),
+  chunked to mid-length paragraphs. Examples: *Pride and Prejudice*, *Sherlock Holmes*,
+  *Walden*, *Frankenstein*, *Huckleberry Finn*, *Dracula*, *Jane Eyre*, *Call of the Wild*, …
+- **`packages/corpus` seed**: PD / CC0 / CC-BY / CC-BY-SA excerpts with attribution in `input`
+- **`natural_writing.jsonl`**: hand-written blog scaffolds (merch, lifestyle, how-to)
+
+Labels are **authentic human text** as `output` (no AI-fabricated “human” targets).
+
+### Rebuild / expand dataset
 
 ```bash
-brew install ollama          # once
-brew services start ollama
+# Re-download (polite) + rebuild JSONL (default max 1500)
+node ml/writer-train/build-open-human-data.mjs --max 1500
+
+# Use existing gutenberg-cache only
+node ml/writer-train/build-open-human-data.mjs --skip-download --max 1500
+```
+
+To expand: add more Gutenberg IDs in `GUTENBERG_BOOKS` inside `build-open-human-data.mjs`,
+or append owned articles to `natural_writing.jsonl`, then rebuild.
+
+## Quick start — Ollama (app default)
+
+```bash
+brew install ollama && brew services start ollama
 ./ml/writer-train/create-ollama-model.sh
+# optional: REBUILD_DATA=1 ./ml/writer-train/create-ollama-model.sh
 ```
 
 Smoke test:
@@ -29,6 +60,22 @@ Smoke test:
 ```bash
 ollama run check-grammar-writer "Write 80 words on branded clothes, natural blog style"
 ```
+
+## Optional — MLX LoRA (Apple Silicon)
+
+Succeeded on M2 / ~8GB with 4-bit Llama 3.2 3B, batch 1, 4 LoRA layers, 30 iters
+(peak ~2.6GB). Adapters: `adapters/open-human-lora/`.
+
+```bash
+cd ml/writer-train
+python3 -m venv .venv && .venv/bin/pip install mlx-lm
+# prepare data/mlx/{train,valid}.jsonl via try-mlx-lora.sh or build script notes
+./try-mlx-lora.sh
+```
+
+Serving path for the web app remains **Ollama** `check-grammar-writer` (Modelfile).
+MLX adapters are for further local experiments / fuse→GGUF later; they are not
+auto-loaded by Ollama.
 
 ## Point Check Grammar at it
 
@@ -43,26 +90,6 @@ OLLAMA_BASE_URL=http://127.0.0.1:11434
 OLLAMA_MODEL=check-grammar-writer
 ```
 
-Restart `npm run dev:web`. Optional bridge: `npm run llm:serve` with the same model name.
+Restart `npm run dev:web`. Optional bridge: `npm run llm:serve`.
 
-## Add your own articles (for later LoRA)
-
-Append JSONL lines (rights you own):
-
-```json
-{"instruction":"Write a blog draft on the topic. Match the audience and tone. Return only the draft.","input":"Topic: …\nAudience: …\nTone: natural\nWords: ~120","output":"…your polished human draft…"}
-```
-
-Clean ads/footers. Prefer your published posts over web scrapes. See also
-[`docs/local-model-training.md`](../../docs/local-model-training.md).
-
-## Later: light MLX LoRA (optional)
-
-This Mac profile (Apple Silicon, modest RAM/disk) is a poor fit for a rushed LoRA in &lt;30 minutes.
-When you have **≥16GB RAM**, free disk for adapters, and 50–500 of *your* pieces:
-
-1. Convert JSONL to the chat/instruction format your trainer expects.
-2. LoRA on **Llama 3.2 3B** with [MLX-LM](https://github.com/ml-explore/mlx-lm) or Unsloth on a GPU box.
-3. Export GGUF / merge → new Ollama `FROM` in a Modelfile, or keep using the prompt-only model until then.
-
-Do **not** train to fool detectors. Grammar-only MLX experiments remain under [`ml/README.md`](../README.md).
+See also [`docs/local-model-training.md`](../../docs/local-model-training.md).

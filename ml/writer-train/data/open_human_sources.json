@@ -1,0 +1,189 @@
+{
+  "gutenberg_books": [
+    {
+      "id": 1342,
+      "title": "Pride and Prejudice",
+      "author": "Jane Austen",
+      "url": "https://www.gutenberg.org/ebooks/1342",
+      "license": "public-domain"
+    },
+    {
+      "id": 1661,
+      "title": "The Adventures of Sherlock Holmes",
+      "author": "Arthur Conan Doyle",
+      "url": "https://www.gutenberg.org/ebooks/1661",
+      "license": "public-domain"
+    },
+    {
+      "id": 205,
+      "title": "Walden",
+      "author": "Henry David Thoreau",
+      "url": "https://www.gutenberg.org/ebooks/205",
+      "license": "public-domain"
+    },
+    {
+      "id": 98,
+      "title": "A Tale of Two Cities",
+      "author": "Charles Dickens",
+      "url": "https://www.gutenberg.org/ebooks/98",
+      "license": "public-domain"
+    },
+    {
+      "id": 84,
+      "title": "Frankenstein",
+      "author": "Mary Shelley",
+      "url": "https://www.gutenberg.org/ebooks/84",
+      "license": "public-domain"
+    },
+    {
+      "id": 2701,
+      "title": "Moby Dick",
+      "author": "Herman Melville",
+      "url": "https://www.gutenberg.org/ebooks/2701",
+      "license": "public-domain"
+    },
+    {
+      "id": 76,
+      "title": "Adventures of Huckleberry Finn",
+      "author": "Mark Twain",
+      "url": "https://www.gutenberg.org/ebooks/76",
+      "license": "public-domain"
+    },
+    {
+      "id": 11,
+      "title": "Alice's Adventures in Wonderland",
+      "author": "Lewis Carroll",
+      "url": "https://www.gutenberg.org/ebooks/11",
+      "license": "public-domain"
+    },
+    {
+      "id": 345,
+      "title": "Dracula",
+      "author": "Bram Stoker",
+      "url": "https://www.gutenberg.org/ebooks/345",
+      "license": "public-domain"
+    },
+    {
+      "id": 174,
+      "title": "The Picture of Dorian Gray",
+      "author": "Oscar Wilde",
+      "url": "https://www.gutenberg.org/ebooks/174",
+      "license": "public-domain"
+    },
+    {
+      "id": 1400,
+      "title": "Great Expectations",
+      "author": "Charles Dickens",
+      "url": "https://www.gutenberg.org/ebooks/1400",
+      "license": "public-domain"
+    },
+    {
+      "id": 2591,
+      "title": "Grimms' Fairy Tales",
+      "author": "Jacob and Wilhelm Grimm",
+      "url": "https://www.gutenberg.org/ebooks/2591",
+      "license": "public-domain"
+    },
+    {
+      "id": 1232,
+      "title": "The Prince",
+      "author": "Niccolò Machiavelli",
+      "url": "https://www.gutenberg.org/ebooks/1232",
+      "license": "public-domain"
+    },
+    {
+      "id": 1080,
+      "title": "A Modest Proposal",
+      "author": "Jonathan Swift",
+      "url": "https://www.gutenberg.org/ebooks/1080",
+      "license": "public-domain"
+    },
+    {
+      "id": 25305,
+      "title": "The Interesting Narrative of the Life of Olaudah Equiano",
+      "author": "Olaudah Equiano",
+      "url": "https://www.gutenberg.org/ebooks/25305",
+      "license": "public-domain"
+    },
+    {
+      "id": 55,
+      "title": "The Wonderful Wizard of Oz",
+      "author": "L. Frank Baum",
+      "url": "https://www.gutenberg.org/ebooks/55",
+      "license": "public-domain"
+    },
+    {
+      "id": 43,
+      "title": "The Strange Case of Dr. Jekyll and Mr. Hyde",
+      "author": "Robert Louis Stevenson",
+      "url": "https://www.gutenberg.org/ebooks/43",
+      "license": "public-domain"
+    },
+    {
+      "id": 16,
+      "title": "Peter Pan",
+      "author": "J. M. Barrie",
+      "url": "https://www.gutenberg.org/ebooks/16",
+      "license": "public-domain"
+    },
+    {
+      "id": 1260,
+      "title": "Jane Eyre",
+      "author": "Charlotte Brontë",
+      "url": "https://www.gutenberg.org/ebooks/1260",
+      "license": "public-domain"
+    },
+    {
+      "id": 1184,
+      "title": "The Count of Monte Cristo",
+      "author": "Alexandre Dumas",
+      "url": "https://www.gutenberg.org/ebooks/1184",
+      "license": "public-domain"
+    },
+    {
+      "id": 215,
+      "title": "The Call of the Wild",
+      "author": "Jack London",
+      "url": "https://www.gutenberg.org/ebooks/215",
+      "license": "public-domain"
+    },
+    {
+      "id": 158,
+      "title": "Emma",
+      "author": "Jane Austen",
+      "url": "https://www.gutenberg.org/ebooks/158",
+      "license": "public-domain"
+    },
+    {
+      "id": 36,
+      "title": "The War of the Worlds",
+      "author": "H. G. Wells",
+      "url": "https://www.gutenberg.org/ebooks/36",
+      "license": "public-domain"
+    },
+    {
+      "id": 244,
+      "title": "A Study in Scarlet",
+      "author": "Arthur Conan Doyle",
+      "url": "https://www.gutenberg.org/ebooks/244",
+      "license": "public-domain"
+    },
+    {
+      "id": 46,
+      "title": "A Christmas Carol",
+      "author": "Charles Dickens",
+      "url": "https://www.gutenberg.org/ebooks/46",
+      "license": "public-domain"
+    }
+  ],
+  "corpus_seed": "/Users/vishalsharma7nov/Documents/check-grammar-tool/packages/corpus/data/seed.json",
+  "natural_scaffold": "/Users/vishalsharma7nov/Documents/check-grammar-tool/ml/writer-train/data/natural_writing.jsonl",
+  "counts": {
+    "open_human_english": 1170,
+    "natural_writing": 61,
+    "merged": 1231,
+    "from_gutenberg": 1110,
+    "from_seed": 61
+  },
+  "ethics": "Human-authored PD / CC text only. No commercial scrapes. Not for AI-detector evasion."
+}

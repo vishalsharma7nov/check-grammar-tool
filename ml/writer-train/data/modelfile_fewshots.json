@@ -1,0 +1,62 @@
+[
+  {
+    "instruction": "Write a short essay paragraph on the topic in clear natural prose. Return only the paragraph.",
+    "input": "Topic: nature: greater, neighbors, believe\nAudience: general readers\nTone: natural classic clarity\nWords: ~120\nSource style: public-domain human prose (Henry David Thoreau)",
+    "output": "The greater part of what my neighbors call good I believe in my soul to be bad, and if I repent of anything, it is very likely to be my good behavior. What demon possessed me that I behaved so well? You may say the wisest thing you can, old man,\u2014you who have lived seventy years, not without honor of a kind,\u2014I hear an irresistible voice which invites me away from all that. One generation abandons the enterprises of another like stranded vessels."
+  },
+  {
+    "instruction": "Write a short essay paragraph on the topic in clear natural prose. Return only the paragraph.",
+    "input": "Topic: observation: kindly, index, doctor\nAudience: general readers\nTone: natural classic clarity\nWords: ~120\nSource style: public-domain human prose (Arthur Conan Doyle)",
+    "output": "\u201cKindly look her up in my index, Doctor,\u201d murmured Holmes without opening his eyes. For many years he had adopted a system of docketing all paragraphs concerning men and things, so that it was difficult to name a subject or a person on which he could not at once furnish information. In this case I found her biography sandwiched in between that of a Hebrew rabbi and that of a staff-commander who had written a monograph upon the deep-sea fishes."
+  },
+  {
+    "instruction": "Write a short essay paragraph on the topic in clear natural prose. Return only the paragraph.",
+    "input": "Topic: character: mother, extort, father\nAudience: general readers\nTone: natural classic clarity\nWords: ~80\nSource style: public-domain human prose (Jane Austen)",
+    "output": "She did at last extort from her father an acknowledgment that the horses were engaged; Jane was therefore obliged to go on horseback, and her mother attended her to the door with many cheerful prognostics of a bad day. Her hopes were answered; Jane had not been gone long before it rained hard. Her sisters were uneasy for her, but her mother was delighted. The rain continued the whole evening without intermission; Jane certainly could not come back."
+  },
+  {
+    "instruction": "Write a short essay paragraph on the topic in clear natural prose. Return only the paragraph.",
+    "input": "Topic: friendship: going, again, whisky\nAudience: general readers\nTone: natural classic clarity\nWords: ~120\nSource style: public-domain human prose (Mark Twain)",
+    "output": "He took it and bit it to see if it was good, and then he said he was going down town to get some whisky; said he hadn\u2019t had a drink all day. When he had got out on the shed he put his head in again, and cussed me for putting on frills and trying to be better than him; and when I reckoned he was gone he come back and put his head in again, and told me to mind about that school, because he was going to lay for me and lick me if I didn\u2019t drop that."
+  },
+  {
+    "instruction": "Write a short essay paragraph on the topic in clear natural prose. Return only the paragraph.",
+    "input": "Topic: survival: bridge, walked, unsteadily\nAudience: general readers\nTone: natural classic clarity\nWords: ~120\nSource style: public-domain human prose (H. G. Wells)",
+    "output": "I rose and walked unsteadily up the steep incline of the bridge. My mind was blank wonder. My muscles and nerves seemed drained of their strength. I dare say I staggered drunkenly. A head rose over the arch, and the figure of a workman carrying a basket appeared. Beside him ran a little boy. He passed me, wishing me good night. I was minded to speak to him, but did not. I answered his greeting with a meaningless mumble and went on over the bridge."
+  },
+  {
+    "instruction": "Write a short essay paragraph on the topic in clear natural prose. Return only the paragraph.",
+    "input": "Topic: London: ivory-faced, silvery-haired, woman\nAudience: general readers\nTone: natural classic clarity\nWords: ~120\nSource style: public-domain human prose (Robert Louis Stevenson)",
+    "output": "An ivory-faced and silvery-haired old woman opened the door. She had an evil face, smoothed by hypocrisy: but her manners were excellent. Yes, she said, this was Mr. Hyde\u2019s, but he was not at home; he had been in that night very late, but he had gone away again in less than an hour; there was nothing strange in that; his habits were very irregular, and he was often absent; for instance, it was nearly two months since she had seen him till yesterday."
+  },
+  {
+    "instruction": "Write a short essay paragraph on the topic in clear natural prose. Return only the paragraph.",
+    "input": "Topic: justice: mistress, first, began\nAudience: general readers\nTone: natural classic clarity\nWords: ~120\nSource style: public-domain human prose (Olaudah Equiano)",
+    "output": "Here my mistress first began her part, with telling me that I must have good spirits, and learn to be free with her; that she had not taken me to be a common servant, to do domestic drudgery, but to be a kind of companion to her; and that if I would be a good girl, she would do more than twenty mothers for me; to all which I answered only by the profoundest and the awkwardest curtsies, and a few monosyllables, such as \u201c\u2019yes! no! to be sure!\u201d"
+  },
+  {
+    "instruction": "Write a short essay paragraph on the topic in clear natural prose. Return only the paragraph.",
+    "input": "Topic: poverty: profess, sincerity, heart\nAudience: general readers\nTone: natural classic clarity\nWords: ~80\nSource style: public-domain human prose (Jonathan Swift)",
+    "output": "I profess in the sincerity of my heart, that I have not the least personal interest in endeavouring to promote this necessary work, having no other motive than the publick good of my country, by advancing our trade, providing for infants, relieving the poor, and giving some pleasure to the rich. I have no children, by which I can propose to get a single penny; the youngest being nine years old, and my wife past child-bearing."
+  },
+  {
+    "instruction": "Write a short essay paragraph on the topic in clear natural prose. Return only the paragraph.",
+    "input": "Topic: instinct: shoulder, spitz, check\nAudience: general readers\nTone: natural classic clarity\nWords: ~120\nSource style: public-domain human prose (Jack London)",
+    "output": "Buck did not cry out. He did not check himself, but drove in upon Spitz, shoulder to shoulder, so hard that he missed the throat. They rolled over and over in the powdery snow. Spitz gained his feet almost as though he had not been overthrown, slashing Buck down the shoulder and leaping clear. Twice his teeth clipped together, like the steel jaws of a trap, as he backed away for better footing, with lean and lifting lips that writhed and snarled."
+  },
+  {
+    "instruction": "Write a short essay paragraph on the topic in clear natural prose. Return only the paragraph.",
+    "input": "Topic: friendship: forest, found, thick\nAudience: general readers\nTone: natural classic clarity\nWords: ~120\nSource style: public-domain human prose (L. Frank Baum)",
+    "output": "They found the forest very thick on this side, and it looked dark and gloomy. After the Lion had rested they started along the road of yellow brick, silently wondering, each in his own mind, if ever they would come to the end of the woods and reach the bright sunshine again. To add to their discomfort, they soon heard strange noises in the depths of the forest, and the Lion whispered to them that it was in this part of the country that the Kalidahs lived."
+  },
+  {
+    "instruction": "Write a short informative paragraph on the topic in clear natural prose. Return only the paragraph.",
+    "input": "Topic: democracy, rights, government\nAudience: curious readers\nTone: clear explanatory\nWords: ~60\nAttribution note: public-domain; United States Declaration of Independence (excerpt)",
+    "output": "We hold these truths to be self-evident, that all men are created equal, that they are endowed by their Creator with certain unalienable Rights, that among these are Life, Liberty and the pursuit of Happiness. That to secure these rights, Governments are instituted among Men, deriving their just powers from the consent of the governed."
+  },
+  {
+    "instruction": "Write a short informative paragraph on the topic in clear natural prose. Return only the paragraph.",
+    "input": "Topic: democracy, constitution, government\nAudience: curious readers\nTone: clear explanatory\nWords: ~60\nAttribution note: public-domain; US Constitution \u2014 Preamble",
+    "output": "We the People of the United States, in Order to form a more perfect Union, establish Justice, insure domestic Tranquility, provide for the common defence, promote the general Welfare, and secure the Blessings of Liberty to ourselves and our Posterity, do ordain and establish this Constitution for the United States of America."
+  }
+]

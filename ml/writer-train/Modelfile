@@ -20,6 +20,9 @@ Style guide (magazine / blog conversational clarity):
   clearly helps; skip brackets if they feel awkward.
 - This is AI-assisted draft text meant for the user to edit in their own voice.
 - Do NOT try to evade AI detectors, score targets, or make text "undetectable".
+- Rhythm training signal: public-domain human prose (Project Gutenberg) informed few-shots below
+  for sentence variety and concrete detail — adapt that clarity to modern blog topics; do not
+  imitate archaic diction unless the brief asks for it.
 
 Return ONLY the draft text — no title labels, markdown fences, word-count notes, or preamble.
 Aim for approximately the requested word count. Use natural paragraphs.
@@ -33,6 +36,7 @@ Audience: indie founders
 Tone: natural
 Words: ~100
 """
+
 MESSAGE assistant """
 Branded clothes turn a vague "we exist" into something people can wear. A clean tee with your mark on the chest is a walking receipt—customers remember the shop because they saw the logo on a commute, not in an ad.
 
@@ -49,6 +53,7 @@ Audience: small ecommerce brands
 Tone: practical
 Words: ~90
 """
+
 MESSAGE assistant """
 Ask for a sample of the exact blank you'll use. Photos hide thin fabric and muddy blacks. Check turnaround in writing, not in a chat promise.
 
@@ -60,14 +65,154 @@ If the printer won't share care labels or fabric specs, walk. Your customers wil
 MESSAGE user """
 Write a blog draft on the topic. Match the audience and tone. Return only the draft.
 
-Topic: how to outline a blog post fast
-Audience: content writers
-Tone: practical
-Words: ~90
+Topic: branded hoodies for winter pop-ups
+Audience: streetwear founders
+Tone: conversational
+Words: ~85
 """
+
 MESSAGE assistant """
-Write the question your reader is actually asking in one line. List three answers or steps. Under each, add one concrete example—a number, a tool, a mistake you've seen.
+A hoodie at a winter pop-up does more than keep someone warm. It's the piece people keep wearing after the booth is packed. Go mid-weight—not a summer fleece pretending to be winter gear.
 
-Draft the middle first; openings are easier once you know the point. Cut any paragraph that restates the previous one. End with what to do next, not a vague "in conclusion."
+Keep the front graphic simple; sleeves and hoods eat detail. Offer two sizes that fit most bodies rather than eight that sit unsold. Let people try it on. Fit sells louder than a discount sticker.
 """
 
+MESSAGE user """
+Write a short essay paragraph on the topic in clear natural prose. Return only the paragraph.
+
+Topic: simplicity: desperate, desperation, called
+Audience: general readers
+Tone: natural classic clarity
+Words: ~80
+Source style: public-domain human prose (Henry David Thoreau)
+"""
+
+MESSAGE assistant """
+The mass of men lead lives of quiet desperation. What is called resignation is confirmed desperation. From the desperate city you go into the desperate country, and have to console yourself with the bravery of minks and muskrats. A stereotyped but unconscious despair is concealed even under what are called the games and amusements of mankind. There is no play in them, for this comes after work. But it is a characteristic of wisdom not to do desperate things.
+"""
+
+MESSAGE user """
+Write a short essay paragraph on the topic in clear natural prose. Return only the paragraph.
+
+Topic: nature: greater, neighbors, believe
+Audience: general readers
+Tone: natural classic clarity
+Words: ~120
+Source style: public-domain human prose (Henry David Thoreau)
+"""
+
+MESSAGE assistant """
+The greater part of what my neighbors call good I believe in my soul to be bad, and if I repent of anything, it is very likely to be my good behavior. What demon possessed me that I behaved so well? You may say the wisest thing you can, old man,—you who have lived seventy years, not without honor of a kind,—I hear an irresistible voice which invites me away from all that. One generation abandons the enterprises of another like stranded vessels.
+"""
+
+MESSAGE user """
+Write a short essay paragraph on the topic in clear natural prose. Return only the paragraph.
+
+Topic: observation: kindly, index, doctor
+Audience: general readers
+Tone: natural classic clarity
+Words: ~120
+Source style: public-domain human prose (Arthur Conan Doyle)
+"""
+
+MESSAGE assistant """
+“Kindly look her up in my index, Doctor,” murmured Holmes without opening his eyes. For many years he had adopted a system of docketing all paragraphs concerning men and things, so that it was difficult to name a subject or a person on which he could not at once furnish information. In this case I found her biography sandwiched in between that of a Hebrew rabbi and that of a staff-commander who had written a monograph upon the deep-sea fishes.
+"""
+
+MESSAGE user """
+Write a short essay paragraph on the topic in clear natural prose. Return only the paragraph.
+
+Topic: character: mother, extort, father
+Audience: general readers
+Tone: natural classic clarity
+Words: ~80
+Source style: public-domain human prose (Jane Austen)
+"""
+
+MESSAGE assistant """
+She did at last extort from her father an acknowledgment that the horses were engaged; Jane was therefore obliged to go on horseback, and her mother attended her to the door with many cheerful prognostics of a bad day. Her hopes were answered; Jane had not been gone long before it rained hard. Her sisters were uneasy for her, but her mother was delighted. The rain continued the whole evening without intermission; Jane certainly could not come back.
+"""
+
+MESSAGE user """
+Write a short essay paragraph on the topic in clear natural prose. Return only the paragraph.
+
+Topic: survival: bridge, walked, unsteadily
+Audience: general readers
+Tone: natural classic clarity
+Words: ~120
+Source style: public-domain human prose (H. G. Wells)
+"""
+
+MESSAGE assistant """
+I rose and walked unsteadily up the steep incline of the bridge. My mind was blank wonder. My muscles and nerves seemed drained of their strength. I dare say I staggered drunkenly. A head rose over the arch, and the figure of a workman carrying a basket appeared. Beside him ran a little boy. He passed me, wishing me good night. I was minded to speak to him, but did not. I answered his greeting with a meaningless mumble and went on over the bridge.
+"""
+
+MESSAGE user """
+Write a short essay paragraph on the topic in clear natural prose. Return only the paragraph.
+
+Topic: London: ivory-faced, silvery-haired, woman
+Audience: general readers
+Tone: natural classic clarity
+Words: ~120
+Source style: public-domain human prose (Robert Louis Stevenson)
+"""
+
+MESSAGE assistant """
+An ivory-faced and silvery-haired old woman opened the door. She had an evil face, smoothed by hypocrisy: but her manners were excellent. Yes, she said, this was Mr. Hyde’s, but he was not at home; he had been in that night very late, but he had gone away again in less than an hour; there was nothing strange in that; his habits were very irregular, and he was often absent; for instance, it was nearly two months since she had seen him till yesterday.
+"""
+
+MESSAGE user """
+Write a short essay paragraph on the topic in clear natural prose. Return only the paragraph.
+
+Topic: justice: mistress, first, began
+Audience: general readers
+Tone: natural classic clarity
+Words: ~120
+Source style: public-domain human prose (Olaudah Equiano)
+"""
+
+MESSAGE assistant """
+Here my mistress first began her part, with telling me that I must have good spirits, and learn to be free with her; that she had not taken me to be a common servant, to do domestic drudgery, but to be a kind of companion to her; and that if I would be a good girl, she would do more than twenty mothers for me; to all which I answered only by the profoundest and the awkwardest curtsies, and a few monosyllables, such as “’yes! no! to be sure!”
+"""
+
+MESSAGE user """
+Write a short essay paragraph on the topic in clear natural prose. Return only the paragraph.
+
+Topic: instinct: shoulder, spitz, check
+Audience: general readers
+Tone: natural classic clarity
+Words: ~120
+Source style: public-domain human prose (Jack London)
+"""
+
+MESSAGE assistant """
+Buck did not cry out. He did not check himself, but drove in upon Spitz, shoulder to shoulder, so hard that he missed the throat. They rolled over and over in the powdery snow. Spitz gained his feet almost as though he had not been overthrown, slashing Buck down the shoulder and leaping clear. Twice his teeth clipped together, like the steel jaws of a trap, as he backed away for better footing, with lean and lifting lips that writhed and snarled.
+"""
+
+MESSAGE user """
+Write a short informative paragraph on the topic in clear natural prose. Return only the paragraph.
+
+Topic: democracy, rights, government
+Audience: curious readers
+Tone: clear explanatory
+Words: ~60
+Attribution note: public-domain; United States Declaration of Independence (excerpt)
+"""
+
+MESSAGE assistant """
+We hold these truths to be self-evident, that all men are created equal, that they are endowed by their Creator with certain unalienable Rights, that among these are Life, Liberty and the pursuit of Happiness. That to secure these rights, Governments are instituted among Men, deriving their just powers from the consent of the governed.
+"""
+
+MESSAGE user """
+Write a short informative paragraph on the topic in clear natural prose. Return only the paragraph.
+
+Topic: democracy, constitution, government
+Audience: curious readers
+Tone: clear explanatory
+Words: ~60
+Attribution note: public-domain; US Constitution — Preamble
+"""
+
+MESSAGE assistant """
+We the People of the United States, in Order to form a more perfect Union, establish Justice, insure domestic Tranquility, provide for the common defence, promote the general Welfare, and secure the Blessings of Liberty to ourselves and our Posterity, do ordain and establish this Constitution for the United States of America.
+"""

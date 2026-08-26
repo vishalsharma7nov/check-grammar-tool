@@ -60,3 +60,9 @@ packages/engine/data/*.txt
 # Logs
 *.log
 npm-debug.log*
+ml/writer-train/data/gutenberg-cache/
+ml/writer-train/data/mlx/
+ml/writer-train/.venv/
+ml/writer-train/adapters/**/0000*_adapters.safetensors
+ml/writer-train/adapters/*.log
+ml/writer-train/adapters/*-sample.txt
