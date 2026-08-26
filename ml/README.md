@@ -50,3 +50,7 @@ python ml/serve/test_ollama.py -v
 Cluster scale (do not run on M2): `ml/configs/cluster-1b.yaml`.
 
 Licenses for public GEC corpora: `ml/data/LICENSES.md`. Never train on user docs unless they opt in.
+
+## Natural content writing (Ollama)
+
+For Writer Studio / AI Write style (not GEC), see [`writer-train/`](writer-train/) — builds local model `check-grammar-writer`.

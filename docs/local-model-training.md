@@ -40,6 +40,24 @@ Clean: strip tracking URLs, ads, “subscribe” footers. Keep citations honest 
 
 ## Practical stacks
 
+### A0. Ready-made local writer (this repo)
+
+On Apple Silicon, the fastest path is an Ollama **Modelfile** (system prompt + few-shots), not a full LoRA:
+
+```bash
+brew install ollama && brew services start ollama
+./ml/writer-train/create-ollama-model.sh
+```
+
+That creates **`check-grammar-writer`** from `llama3.2:3b` with natural-prose instructions aligned to Writer Studio. Dataset scaffold for a later LoRA: `ml/writer-train/data/natural_writing.jsonl`. Details: [`ml/writer-train/README.md`](../ml/writer-train/README.md).
+
+```bash
+LLM_BASE_URL=http://127.0.0.1:11434/v1
+LLM_MODEL=check-grammar-writer
+LLM_API_KEY=ollama
+OLLAMA_MODEL=check-grammar-writer
+```
+
 ### A. Ollama only (simplest — no fine-tune)
 
 Use a strong small base model and rely on Check Grammar’s natural-draft prompts:
