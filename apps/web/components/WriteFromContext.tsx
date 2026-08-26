@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import type { Dialect } from "@check-grammar/protocol";
-import { fetchGenerate } from "../lib/generate";
+import { generateDraft, type Citation } from "../lib/generate";
+import { naturalizeDraft } from "../lib/naturalize";
 import { copyToClipboard } from "../lib/exportCorrected";
 
 type WordPreset = 100 | 500 | "custom";
@@ -18,11 +19,14 @@ export default function WriteFromContext({ dialect, open, onClose, onInsert }: P
   const [context, setContext] = useState("");
   const [preset, setPreset] = useState<WordPreset>(100);
   const [customCount, setCustomCount] = useState(200);
+  const [useResearch, setUseResearch] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [naturalizing, setNaturalizing] = useState(false);
   const [error, setError] = useState("");
   const [draft, setDraft] = useState("");
   const [actualCount, setActualCount] = useState(0);
   const [meta, setMeta] = useState("");
+  const [citations, setCitations] = useState<Citation[]>([]);
   const [copyNote, setCopyNote] = useState("");
 
   if (!open) return null;
@@ -46,16 +50,40 @@ export default function WriteFromContext({ dialect, open, onClose, onInsert }: P
     setDraft("");
     setActualCount(0);
     setMeta("");
+    setCitations([]);
     setCopyNote("");
     try {
-      const out = await fetchGenerate(brief, n, dialect);
+      const out = await generateDraft({
+        context: brief,
+        wordCount: n,
+        dialect,
+        useResearch,
+        topic: brief,
+      });
       setDraft(out.text);
       setActualCount(out.wordCount);
+      setCitations(out.citations);
       setMeta([out.provider, out.model].filter(Boolean).join(" · "));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleNaturalize() {
+    if (!draft.trim()) return;
+    setNaturalizing(true);
+    setError("");
+    try {
+      const out = await naturalizeDraft({ text: draft });
+      setDraft(out.text);
+      setActualCount(out.text.split(/\s+/).filter(Boolean).length);
+      setMeta([out.provider, out.model].filter(Boolean).join(" · ") || out.provider);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setNaturalizing(false);
     }
   }
 
@@ -66,6 +94,8 @@ export default function WriteFromContext({ dialect, open, onClose, onInsert }: P
     window.setTimeout(() => setCopyNote(""), 2000);
   }
 
+  const busy = loading || naturalizing;
+
   return (
     <>
       <div className="rw-backdrop" aria-hidden onClick={onClose} />
@@ -74,7 +104,8 @@ export default function WriteFromContext({ dialect, open, onClose, onInsert }: P
           <div>
             <h3>AI Write</h3>
             <p className="aiw-sub">
-              Draft original text from your brief. This is a writing assistant — not a plagiarism check.
+              Draft original text from your brief. Optional open-corpus research adds citations — not a
+              plagiarism check or detector bypass.
             </p>
           </div>
           <button type="button" className="sg-pop-x" onClick={onClose} aria-label="Close">
@@ -90,11 +121,21 @@ export default function WriteFromContext({ dialect, open, onClose, onInsert }: P
             onChange={(e) => setContext(e.target.value)}
             placeholder="Topic, audience, tone, and key points…"
             rows={4}
-            disabled={loading}
+            disabled={busy}
           />
         </label>
 
-        <fieldset className="aiw-words" disabled={loading}>
+        <label className="aiw-field aiw-check">
+          <input
+            type="checkbox"
+            checked={useResearch}
+            onChange={(e) => setUseResearch(e.target.checked)}
+            disabled={busy}
+          />
+          <span>Use open research (public domain / open licenses)</span>
+        </label>
+
+        <fieldset className="aiw-words" disabled={busy}>
           <legend className="field-label">Word count</legend>
           <div className="aiw-word-opts" role="radiogroup" aria-label="Target word count">
             <label className="aiw-word-opt">
@@ -149,7 +190,7 @@ export default function WriteFromContext({ dialect, open, onClose, onInsert }: P
             type="button"
             className="primary"
             onClick={handleGenerate}
-            disabled={loading || !context.trim() || customInvalid}
+            disabled={busy || !context.trim() || customInvalid}
           >
             {loading ? "Generating…" : "Generate draft"}
           </button>
@@ -168,12 +209,34 @@ export default function WriteFromContext({ dialect, open, onClose, onInsert }: P
             </div>
             <div className="aiw-draft">{draft}</div>
             {meta ? <p className="rw-meta">via {meta}</p> : null}
+            {citations.length ? (
+              <div className="aiw-citations">
+                <span className="rw-label">Citations</span>
+                <ul>
+                  {citations.map((c) => (
+                    <li key={`${c.sourceUrl}-${c.title}`}>
+                      {c.sourceUrl ? (
+                        <a href={c.sourceUrl} target="_blank" rel="noreferrer">
+                          {c.title}
+                        </a>
+                      ) : (
+                        <span>{c.title}</span>
+                      )}{" "}
+                      <span className="aiw-license">({c.license})</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             <div className="sg-pop-actions">
               <button type="button" className="primary" onClick={() => onInsert(draft, "append")}>
                 Insert into editor
               </button>
               <button type="button" className="secondary" onClick={() => onInsert(draft, "replace")}>
                 Replace editor
+              </button>
+              <button type="button" onClick={handleNaturalize} disabled={busy}>
+                {naturalizing ? "Naturalizing…" : "Naturalize"}
               </button>
               <button type="button" onClick={handleCopy}>
                 Copy

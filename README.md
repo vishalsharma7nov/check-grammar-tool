@@ -1,6 +1,6 @@
 # Check Grammar
 
-**Privacy-first, open-source writing assistant** — spelling, grammar, rewrite, AI Write, and optional plagiarism checks. Bring your own API keys (BYOK). Core checking runs in your browser by default; cloud LLM and plagiarism only when you opt in.
+**Privacy-first, open-source writing assistant** — spelling, grammar, rewrite, Writer Studio, AI Write, and optional plagiarism checks. Bring your own API keys (BYOK). Core checking runs in your browser by default; cloud LLM and plagiarism only when you opt in.
 
 This project is **not** affiliated with Grammarly.
 
@@ -13,8 +13,9 @@ This project is **not** affiliated with Grammarly.
 | Feature | What it does | Needs a key? |
 | --- | --- | --- |
 | **Privacy engine** | Spelling (~370k words), grammar, punctuation, next-word — in the browser | No |
+| **Writer Studio** | Research open-license sources → draft → naturalize → insert/export Markdown | Optional Groq (`LLM_API_KEY`); research/naturalize APIs when deployed |
 | **Rewrite** | Clarity / brevity / formality variants | Optional Groq (`LLM_API_KEY`) or local Ollama |
-| **AI Write** | Draft original text from a brief (100–2000 words) | Groq / OpenAI-compatible `LLM_API_KEY` |
+| **AI Write** | Quick original draft from a brief (100–2000 words) | Groq / OpenAI-compatible `LLM_API_KEY` |
 | **Plagiarism check** | Compare text to published sources so you can **cite** them (detection only) | Optional Winston AI (`PLAGIARISM_API_KEY`) |
 | **Enhanced grammar** | Merges rule engine with optional [LanguageTool](https://languagetool.org) | Optional self-hosted LT (`LANGUAGETOOL_URL`) |
 | **Local LLM** | Offline Enhanced + rewrite via [Ollama](https://ollama.com) | No cloud key — run Ollama on your machine |
@@ -123,6 +124,17 @@ Copy the same names into your hosting dashboard — the app reads process env, n
 
 ---
 
+## Writer Studio
+
+Content-writer workspace in the web editor toolbar (**Writer Studio**): research public-domain / open-license sources → generate a draft → naturalize voice → insert into the editor or **Export Markdown** (with citations appendix).
+
+- Not for plagiarism evasion or AI-detector bypass.
+- Client calls: `POST /api/research`, `POST /api/generate` (`useResearch`, audience, tone), `POST /api/naturalize`.
+- If a route returns 404, the UI shows a friendly redeploy message until those APIs are live.
+- **AI Write** remains available for a quick one-shot draft.
+
+---
+
 ## Hosting
 
 ### Vercel (web editor — recommended free demo)
@@ -144,7 +156,7 @@ Deploy **`apps/web`** only. Privacy spelling/grammar run in the visitor’s brow
 | `PLAGIARISM_PROVIDER` / `PLAGIARISM_API_URL` | Optional provider overrides |
 | `NEXT_PUBLIC_API_URL` | Only if you also host the Go API (Enhanced mode) |
 
-Same-origin routes: `POST /api/rewrite`, `POST /api/generate`, `POST /api/check`, `POST /api/plagiarism`, `GET /api/healthz`.
+Same-origin routes: `POST /api/rewrite`, `POST /api/generate`, `POST /api/research`, `POST /api/naturalize`, `POST /api/check`, `POST /api/plagiarism`, `GET /api/healthz`.
 
 Step-by-step screenshots and troubleshooting: **[docs/vercel.md](docs/vercel.md)** (points back here for the full env table).
 

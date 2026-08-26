@@ -4,7 +4,9 @@
  */
 
 import type { Dialect, RewriteGoal, RewriteVariant } from "@check-grammar/protocol";
+import type { Citation } from "./corpus/types";
 import { localRewriteVariants } from "./rewrite";
+import { localNaturalize } from "./naturalizeLocal";
 
 export const DEFAULT_LLM_BASE = "https://api.groq.com/openai/v1";
 /** Groq free/dev default — llama-3.1-8b-instant retired 2026-08-16; see console.groq.com/docs/deprecations */
@@ -250,22 +252,80 @@ export async function rewriteWithLlm(
 
 const GENERATE_SYSTEM = `You are Check Grammar's AI writing assistant.
 
-Write ORIGINAL content from the user's brief. Do not copy or closely paraphrase published sources.
+Write ORIGINAL prose from the user's brief. Do not copy or closely paraphrase published sources.
 Return ONLY the draft text — no title labels, markdown fences, word-count notes, or preamble.
 Aim for approximately the requested word count. Use natural paragraphs.`;
+
+const GENERATE_GROUNDED_SYSTEM = `You are Check Grammar's AI writing assistant for content writers.
+
+Write ORIGINAL prose. Use the research passages only for facts and inspiration.
+Cite sources where you rely on them (short inline markers like [1] or a Sources section is fine).
+Do not copy long verbatim quotes from the passages.
+Do not try to evade AI detectors or make text "undetectable" — focus on clear, natural writing quality.
+Return ONLY the draft text — no title labels, markdown fences, word-count notes, or preamble.
+Aim for approximately the requested word count. Use natural paragraphs.`;
+
+const NATURALIZE_SYSTEM = `You are Check Grammar's prose editor.
+
+Improve natural writing quality ONLY:
+- Vary sentence rhythm and openings
+- Prefer concrete nouns and verbs; cut AI filler ("Furthermore,", "In conclusion,", "It is important to note that")
+- Keep the author's meaning and any citation markers ([1], Sources, links)
+- Do NOT obfuscate text to evade AI detectors or make content "undetectable"
+
+Return ONLY the revised text — no preamble or explanation.`;
+
+export type GeneratePassage = {
+  title: string;
+  sourceUrl: string;
+  license: string;
+  text: string;
+};
+
+export type GenerateWithLlmOptions = {
+  passages?: GeneratePassage[];
+  audience?: string;
+  tone?: string;
+};
 
 function countWords(s: string): number {
   const m = s.trim().match(/\S+/g);
   return m ? m.length : 0;
 }
 
-/** Original draft from context via Groq / OpenAI-compatible chat. */
+function formatPassagesForPrompt(passages: GeneratePassage[]): string {
+  return passages
+    .map(
+      (p, i) =>
+        `[${i + 1}] ${p.title} (${p.license})\nURL: ${p.sourceUrl}\n${p.text.trim()}`,
+    )
+    .join("\n\n");
+}
+
+function citationsFromPassages(passages: GeneratePassage[]): Citation[] {
+  const seen = new Set<string>();
+  const out: Citation[] = [];
+  for (const p of passages) {
+    const key = p.sourceUrl || p.title;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      title: p.title,
+      sourceUrl: p.sourceUrl,
+      license: p.license,
+    });
+  }
+  return out;
+}
+
+/** Original draft from context via Groq / OpenAI-compatible chat; optional open-corpus grounding. */
 export async function generateWithLlm(
   context: string,
   wordCount: number,
   dialect: Dialect,
+  opts?: GenerateWithLlmOptions,
 ): Promise<
-  | { text: string; wordCount: number; provider: string; model: string }
+  | { text: string; wordCount: number; provider: string; model: string; citations: Citation[] }
   | { error: string; status: number }
 > {
   const env = llmEnv();
@@ -277,11 +337,32 @@ export async function generateWithLlm(
     };
   }
   const brief = context.trim();
+  const passages = (opts?.passages ?? []).filter((p) => p.text?.trim());
+  const citations = citationsFromPassages(passages);
+  const system = passages.length ? GENERATE_GROUNDED_SYSTEM : GENERATE_SYSTEM;
+
+  const extra: string[] = [];
+  if (opts?.audience?.trim()) extra.push(`Audience: ${opts.audience.trim()}`);
+  if (opts?.tone?.trim()) extra.push(`Tone: ${opts.tone.trim()}`);
+  const meta = extra.length ? `${extra.join("\n")}\n` : "";
+
+  const userParts = [
+    `Dialect: ${dialect}`,
+    `Target length: about ${wordCount} words (minimum ${Math.min(wordCount, 100)}).`,
+    meta.trimEnd(),
+    `Writing brief:\n${brief}`,
+  ];
+  if (passages.length) {
+    userParts.push(
+      `Research passages (facts/inspiration only — write original prose; cite sources; do not copy long verbatim quotes):\n\n${formatPassagesForPrompt(passages)}`,
+    );
+  }
+
   try {
     const { content, model } = await chatCompletion(
       env,
-      GENERATE_SYSTEM,
-      `Dialect: ${dialect}\nTarget length: about ${wordCount} words (minimum ${Math.min(wordCount, 100)}).\n\nWriting brief:\n${brief}`,
+      system,
+      userParts.filter(Boolean).join("\n\n"),
       { temperature: 0.7, timeoutMs: 90_000 },
     );
     const text = stripFence(content).trim();
@@ -293,9 +374,41 @@ export async function generateWithLlm(
       wordCount: countWords(text),
       provider: "hosted",
       model,
+      citations,
     };
   } catch (e) {
     return { error: e instanceof Error ? e.message : String(e), status: 502 };
+  }
+}
+
+/** Natural prose pass — rhythm and filler removal, not detector evasion. */
+export async function naturalizeWithLlm(
+  text: string,
+  tone?: string,
+): Promise<{ text: string; provider: string; model?: string }> {
+  const input = text.trim();
+  if (!input) return { text: "", provider: "rules" };
+
+  const env = llmEnv();
+  if (!llmConfigured(env)) {
+    return { text: localNaturalize(input), provider: "rules" };
+  }
+
+  const toneLine = tone?.trim() ? `Preferred tone: ${tone.trim()}.\n\n` : "";
+  try {
+    const { content, model } = await chatCompletion(
+      env,
+      NATURALIZE_SYSTEM,
+      `${toneLine}---\n${input}`,
+      { temperature: 0.45, timeoutMs: 60_000 },
+    );
+    const out = stripFence(content).trim();
+    if (!out) {
+      return { text: localNaturalize(input), provider: "rules" };
+    }
+    return { text: out, provider: "hosted", model };
+  } catch {
+    return { text: localNaturalize(input), provider: "rules" };
   }
 }
 

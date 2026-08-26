@@ -13,7 +13,8 @@ export default function OnboardingBanner({ onDismiss, onTryExample }: Props) {
         <p>
           <strong>Privacy mode</strong> runs entirely in your browser — nothing leaves this tab.{" "}
           <strong>Enhanced mode</strong> sends text to your own local API (LanguageTool + optional Ollama) for deeper
-          checks when you self-host.
+          checks when you self-host. Use <strong>Writer Studio</strong> for free open-source writing: research open
+          sources, draft, naturalize, then insert into the editor.
         </p>
         <ul className="onboarding-tips">
           <li>

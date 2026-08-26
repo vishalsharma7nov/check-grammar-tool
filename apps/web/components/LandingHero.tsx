@@ -30,8 +30,9 @@ export default function LandingHero() {
           Grammar checks that stay on <em>your</em> machine
         </h1>
         <p className="landing-lead">
-          Spelling, grammar, homophones, inclusive language, and next-word hints — free and open source. No cloud
-          upload by default. Self-host Enhanced mode when you want LanguageTool and local LLM power.
+          Free open-source writing for content writers — research open sources, draft, and polish in your browser. Spelling,
+          grammar, homophones, inclusive language, and next-word hints with no cloud upload by default. Self-host Enhanced
+          mode when you want LanguageTool and local LLM power.
         </p>
         <div className="landing-cta">
           <a href="#editor" className="landing-btn primary">

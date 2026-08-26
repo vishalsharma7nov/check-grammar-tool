@@ -28,6 +28,7 @@ import {
 import { applyAllCorrections, copyToClipboard, downloadText } from "../lib/exportCorrected";
 import PlagiarismPanel from "./PlagiarismPanel";
 import WriteFromContext from "./WriteFromContext";
+import WriterStudio from "./WriterStudio";
 import { checkPlagiarism, PLAGIARISM_OPT_IN_MESSAGE } from "../lib/plagiarism";
 import type { PlagiarismResult } from "@check-grammar/protocol";
 import { DEMO_TEXT, hasSeenOnboarding, markOnboardingSeen } from "../lib/onboarding";
@@ -79,6 +80,7 @@ export default function Editor() {
   const [plagModeNote, setPlagModeNote] = useState("");
   const [plagResult, setPlagResult] = useState<PlagiarismResult | null>(null);
   const [aiWriteOpen, setAiWriteOpen] = useState(false);
+  const [writerStudioOpen, setWriterStudioOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [exportNote, setExportNote] = useState("");
   const [checking, setChecking] = useState(false);
@@ -495,6 +497,7 @@ export default function Editor() {
     selRef.current = { start: cursor, end: cursor };
     setCaret(cursor);
     setAiWriteOpen(false);
+    setWriterStudioOpen(false);
     setDismissed(new Set());
     setOpen(null);
     setRecheckFlash("Draft inserted — rechecking…");
@@ -567,6 +570,7 @@ export default function Editor() {
         setRewriteOpen(false);
         setPlagOpen(false);
         setAiWriteOpen(false);
+        setWriterStudioOpen(false);
       }
     };
     const onDown = (e: MouseEvent) => {
@@ -574,6 +578,8 @@ export default function Editor() {
       if (
         t.closest(".sg-pop") ||
         t.closest(".rw-panel") ||
+        t.closest(".ws-panel") ||
+        t.closest(".aiw-panel") ||
         t.closest(".rw-backdrop") ||
         t.closest(".toolbar") ||
         t.closest("textarea.doc") ||
@@ -720,9 +726,17 @@ export default function Editor() {
             </button>
             <button
               type="button"
+              className="primary"
+              onClick={() => setWriterStudioOpen(true)}
+              title="Research open sources, draft, naturalize, and insert — Writer Studio"
+            >
+              Writer Studio
+            </button>
+            <button
+              type="button"
               className="secondary"
               onClick={() => setAiWriteOpen(true)}
-              title="Generate an original draft from a topic or brief (AI writing assistant)"
+              title="Quick original draft from a topic or brief"
             >
               AI Write
             </button>
@@ -992,6 +1006,12 @@ export default function Editor() {
         dialect={dialect}
         open={aiWriteOpen}
         onClose={() => setAiWriteOpen(false)}
+        onInsert={insertAiDraft}
+      />
+      <WriterStudio
+        dialect={dialect}
+        open={writerStudioOpen}
+        onClose={() => setWriterStudioOpen(false)}
         onInsert={insertAiDraft}
       />
     </div>
