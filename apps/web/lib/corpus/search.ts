@@ -1,3 +1,4 @@
+import { searchCorpus } from "@check-grammar/corpus";
 import { MINI_SEED } from "./seed";
 import type { CorpusChunk, CorpusPassage } from "./types";
 
@@ -58,34 +59,63 @@ function scoreChunk(tokens: string[], chunk: CorpusChunk): number {
 
 export type SearchOpenCorpusOptions = {
   limit?: number;
-  /** Optional fuller corpus; defaults to mini seed. */
+  /** Optional override corpus; when set, uses local lexical scoring over these chunks. */
   corpus?: CorpusChunk[];
 };
 
 /**
- * Lexical search over the open-license seed corpus (Vercel-friendly, no vector DB).
- * Other agents may replace the seed with a larger curated set under the same path.
+ * Search open-license passages for grounded drafting.
+ * Prefers the fuller `@check-grammar/corpus` seed; falls back to mini-seed if needed.
  */
 export function searchOpenCorpus(
   query: string,
   opts: SearchOpenCorpusOptions = {},
 ): CorpusPassage[] {
   const limit = Math.min(20, Math.max(1, opts.limit ?? 5));
-  const corpus = opts.corpus?.length ? opts.corpus : MINI_SEED;
+
+  if (opts.corpus?.length) {
+    const tokens = tokenize(query);
+    if (!tokens.length) return [];
+    return opts.corpus
+      .map((chunk) => ({ chunk, score: scoreChunk(tokens, chunk) }))
+      .filter((r) => r.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+      .map(({ chunk, score }) => ({
+        title: chunk.title,
+        sourceUrl: chunk.sourceUrl,
+        license: chunk.license,
+        text: chunk.text,
+        score,
+      }));
+  }
+
+  try {
+    const hits = searchCorpus(query, { limit });
+    if (hits.length) {
+      return hits.map((p) => ({
+        title: p.title,
+        sourceUrl: p.sourceUrl,
+        license: p.license,
+        text: p.text,
+        score: p.score,
+      }));
+    }
+  } catch {
+    /* fuller package unavailable — mini seed below */
+  }
+
   const tokens = tokenize(query);
   if (!tokens.length) return [];
-
-  const ranked = corpus
-    .map((chunk) => ({ chunk, score: scoreChunk(tokens, chunk) }))
+  return MINI_SEED.map((chunk) => ({ chunk, score: scoreChunk(tokens, chunk) }))
     .filter((r) => r.score > 0)
     .sort((a, b) => b.score - a.score)
-    .slice(0, limit);
-
-  return ranked.map(({ chunk, score }) => ({
-    title: chunk.title,
-    sourceUrl: chunk.sourceUrl,
-    license: chunk.license,
-    text: chunk.text,
-    score,
-  }));
+    .slice(0, limit)
+    .map(({ chunk, score }) => ({
+      title: chunk.title,
+      sourceUrl: chunk.sourceUrl,
+      license: chunk.license,
+      text: chunk.text,
+      score,
+    }));
 }

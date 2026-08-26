@@ -1,4 +1,4 @@
-import seedJson from "../data/seed.json";
+import seedJson from "./seed-data.ts";
 import { searchCorpus as searchCorpusOver, resetCorpusIndexCache } from "./search.ts";
 import type {
   CorpusChunk,
@@ -25,9 +25,7 @@ export {
 };
 
 /** Bundled offline seed (public-domain + CC open licenses only). */
-export const SEED_CORPUS: CorpusChunk[] = filterAllowedChunks(
-  seedJson as CorpusChunk[],
-);
+export const SEED_CORPUS: CorpusChunk[] = filterAllowedChunks(seedJson);
 
 /**
  * Search the bundled open-license seed corpus.

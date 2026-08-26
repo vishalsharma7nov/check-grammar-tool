@@ -82,6 +82,17 @@ if (dryRun) {
   process.exit(0);
 }
 
-// Rewrite pretty-printed seed so future merges stay consistent.
+// Rewrite pretty-printed seed so future merges stay consistent, and sync seed-data.ts.
 fs.writeFileSync(seedPath, JSON.stringify(chunks, null, 2) + "\n");
-console.log("Normalized seed.json. Add Gutenberg excerpts manually, then re-run this script.");
+
+const seedDataPath = path.join(root, "src", "seed-data.ts");
+const seedData = `/** Auto-synced from data/seed.json — run scripts/build-seed.mjs after edits. */
+import type { CorpusChunk } from "./types.ts";
+
+const seed: CorpusChunk[] = ${JSON.stringify(chunks, null, 2)};
+
+export default seed;
+`;
+fs.writeFileSync(seedDataPath, seedData);
+console.log("Normalized seed.json and synced src/seed-data.ts.");
+console.log("Add Gutenberg excerpts to data/seed.json, then re-run this script.");

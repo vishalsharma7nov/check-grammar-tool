@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ["@check-grammar/engine", "@check-grammar/protocol"],
+  transpilePackages: [
+    "@check-grammar/engine",
+    "@check-grammar/protocol",
+    "@check-grammar/corpus",
+  ],
   webpack: (config, { dev }) => {
     if (dev) {
       config.watchOptions = {
