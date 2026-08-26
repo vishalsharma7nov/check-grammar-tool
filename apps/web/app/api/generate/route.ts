@@ -39,8 +39,9 @@ function parsePassages(raw: unknown): GeneratePassage[] {
 
 /**
  * POST /api/generate — original AI draft from a writing brief (not plagiarism check).
+ * Prompts aim for natural, editable content-writer prose (see llmServer natural draft style).
  * Optional open-corpus research: pass `passages` or `useResearch` (+ topic/context).
- * Requires LLM_API_KEY (Groq or OpenAI-compatible).
+ * Requires LLM_API_KEY (Groq or OpenAI-compatible). Not for detector evasion.
  */
 export async function POST(req: Request) {
   let context = "";

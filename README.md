@@ -126,12 +126,13 @@ Copy the same names into your hosting dashboard — the app reads process env, n
 
 ## Writer Studio
 
-Content-writer workspace in the web editor toolbar (**Writer Studio**): research public-domain / open-license sources → generate a draft → naturalize voice → insert into the editor or **Export Markdown** (with citations appendix).
+Content-writer workspace in the web editor toolbar (**Writer Studio**): research public-domain / open-license sources → generate a natural draft for you to edit → naturalize voice → insert into the editor or **Export Markdown** (with citations appendix).
 
-- Not for plagiarism evasion or AI-detector bypass.
+- Not for plagiarism evasion or AI-detector bypass. AI-assisted — edit in your voice.
 - Client calls: `POST /api/research`, `POST /api/generate` (`useResearch`, audience, tone), `POST /api/naturalize`.
 - If a route returns 404, the UI shows a friendly redeploy message until those APIs are live.
 - **AI Write** remains available for a quick one-shot draft.
+- Fine-tune a local model for your natural writing style: **[docs/local-model-training.md](docs/local-model-training.md)**.
 
 ---
 
@@ -213,6 +214,8 @@ Useful scripts (from repo root):
 | `npm run test:engine` | Engine unit tests |
 
 Where text goes in each mode: [docs/data-path.md](docs/data-path.md) and the in-app `/privacy` page.
+
+Train a local LLM for natural content drafts (not detector evasion): [docs/local-model-training.md](docs/local-model-training.md).
 
 ---
 

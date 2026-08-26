@@ -23,7 +23,7 @@ type Props = {
 export default function WriterStudio({ dialect, open, onClose, onInsert }: Props) {
   const [topic, setTopic] = useState("");
   const [audience, setAudience] = useState("");
-  const [tone, setTone] = useState("");
+  const [tone, setTone] = useState("natural");
   const [preset, setPreset] = useState<WordPreset>(100);
   const [customCount, setCustomCount] = useState(200);
   const [useOpenResearch, setUseOpenResearch] = useState(true);
@@ -176,8 +176,8 @@ export default function WriterStudio({ dialect, open, onClose, onInsert }: Props
           <div>
             <h3>Writer Studio</h3>
             <p className="ws-sub">
-              Research open sources, draft in your voice, naturalize, then insert or export. For content writers — not
-              plagiarism evasion or detector bypass.
+              Research open sources, get a natural draft for you to edit, naturalize, then insert or export. For
+              content writers — not plagiarism evasion or detector bypass.
             </p>
           </div>
           <button type="button" className="sg-pop-x" onClick={onClose} aria-label="Close">
@@ -216,11 +216,15 @@ export default function WriterStudio({ dialect, open, onClose, onInsert }: Props
               className="ws-input"
               value={tone}
               onChange={(e) => setTone(e.target.value)}
-              placeholder="e.g. clear, practical, warm"
+              placeholder="natural (default) — or clear, practical, warm"
               disabled={busy}
             />
           </label>
         </div>
+
+        <p className="ws-hint">
+          Tip: Add a personal story or specific brand after generating.
+        </p>
 
         <fieldset className="ws-words" disabled={busy}>
           <legend className="field-label">Word count</legend>
@@ -344,7 +348,7 @@ export default function WriterStudio({ dialect, open, onClose, onInsert }: Props
         {draft ? (
           <div className="ws-result">
             <div className="ws-result-head">
-              <span className="rw-label">Draft</span>
+              <span className="rw-label">Natural draft for you to edit</span>
               <span className="ws-count">{actualCount} words</span>
             </div>
             <div className="ws-draft">{draft}</div>

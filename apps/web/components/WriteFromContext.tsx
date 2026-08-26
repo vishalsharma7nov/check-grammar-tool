@@ -104,8 +104,8 @@ export default function WriteFromContext({ dialect, open, onClose, onInsert }: P
           <div>
             <h3>AI Write</h3>
             <p className="aiw-sub">
-              Draft original text from your brief. Optional open-corpus research adds citations — not a
-              plagiarism check or detector bypass.
+              Get a natural draft for you to edit from your brief. Optional open-corpus research adds
+              citations — not a plagiarism check or detector bypass.
             </p>
           </div>
           <button type="button" className="sg-pop-x" onClick={onClose} aria-label="Close">
@@ -134,6 +134,10 @@ export default function WriteFromContext({ dialect, open, onClose, onInsert }: P
           />
           <span>Use open research (public domain / open licenses)</span>
         </label>
+
+        <p className="aiw-hint">
+          Tip: Add a personal story or specific brand after generating.
+        </p>
 
         <fieldset className="aiw-words" disabled={busy}>
           <legend className="field-label">Word count</legend>
@@ -204,7 +208,7 @@ export default function WriteFromContext({ dialect, open, onClose, onInsert }: P
         {draft ? (
           <div className="aiw-result">
             <div className="aiw-result-head">
-              <span className="rw-label">Generated draft</span>
+              <span className="rw-label">Natural draft for you to edit</span>
               <span className="aiw-count">{actualCount} words</span>
             </div>
             <div className="aiw-draft">{draft}</div>
@@ -245,6 +249,10 @@ export default function WriteFromContext({ dialect, open, onClose, onInsert }: P
             {copyNote ? <p className="rw-status">{copyNote}</p> : null}
           </div>
         ) : null}
+
+        <p className="aiw-disclaimer">
+          AI-assisted draft. Edit in your voice. Cite open sources. Not for academic fraud or hiding AI use.
+        </p>
       </div>
     </>
   );
