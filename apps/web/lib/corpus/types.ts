@@ -15,7 +15,7 @@ export type CorpusChunk = {
 export type CorpusPassage = {
   title: string;
   sourceUrl: string;
-  license: string;
+  license: CorpusLicense;
   text: string;
   score: number;
 };
@@ -23,5 +23,5 @@ export type CorpusPassage = {
 export type Citation = {
   title: string;
   sourceUrl: string;
-  license: string;
+  license: CorpusLicense | string;
 };

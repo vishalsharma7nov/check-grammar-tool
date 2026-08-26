@@ -1,6 +1,23 @@
-import { searchCorpus } from "@check-grammar/corpus";
+import { isAllowedLicense, searchCorpus } from "@check-grammar/corpus";
 import { MINI_SEED } from "./seed";
-import type { CorpusChunk, CorpusPassage } from "./types";
+import type { CorpusChunk, CorpusLicense, CorpusPassage } from "./types";
+
+function asPassage(
+  title: string,
+  sourceUrl: string,
+  license: string,
+  text: string,
+  score: number,
+): CorpusPassage | null {
+  if (!isAllowedLicense(license)) return null;
+  return {
+    title,
+    sourceUrl,
+    license: license as CorpusLicense,
+    text,
+    score,
+  };
+}
 
 const STOP = new Set([
   "a",
@@ -81,25 +98,18 @@ export function searchOpenCorpus(
       .filter((r) => r.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, limit)
-      .map(({ chunk, score }) => ({
-        title: chunk.title,
-        sourceUrl: chunk.sourceUrl,
-        license: chunk.license,
-        text: chunk.text,
-        score,
-      }));
+      .map(({ chunk, score }) =>
+        asPassage(chunk.title, chunk.sourceUrl, chunk.license, chunk.text, score),
+      )
+      .filter((p): p is CorpusPassage => p != null);
   }
 
   try {
     const hits = searchCorpus(query, { limit });
     if (hits.length) {
-      return hits.map((p) => ({
-        title: p.title,
-        sourceUrl: p.sourceUrl,
-        license: p.license,
-        text: p.text,
-        score: p.score,
-      }));
+      return hits
+        .map((p) => asPassage(p.title, p.sourceUrl, p.license, p.text, p.score))
+        .filter((p): p is CorpusPassage => p != null);
     }
   } catch {
     /* fuller package unavailable — mini seed below */
@@ -111,11 +121,8 @@ export function searchOpenCorpus(
     .filter((r) => r.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, limit)
-    .map(({ chunk, score }) => ({
-      title: chunk.title,
-      sourceUrl: chunk.sourceUrl,
-      license: chunk.license,
-      text: chunk.text,
-      score,
-    }));
+    .map(({ chunk, score }) =>
+      asPassage(chunk.title, chunk.sourceUrl, chunk.license, chunk.text, score),
+    )
+    .filter((p): p is CorpusPassage => p != null);
 }
